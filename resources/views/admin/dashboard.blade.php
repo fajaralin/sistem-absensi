@@ -2,7 +2,7 @@
 
 @section('title', 'Admin Dashboard')
 @section('page_title', 'Overview')
-@section('header_title', 'Selamat Datang 👋')
+@section('header_title', 'Selamat Datang')
 @section('header_subtitle', 'Monitor statistik dan aktivitas sistem secara real-time.')
 
 @section('content')
@@ -257,12 +257,18 @@
                     $isFail = str_contains(strtolower($log->action), 'fail') || str_contains(strtolower($log->action), 'error') || str_contains(strtolower($log->action), 'delete');
                     $bgColor = $isSuccess ? 'bg-green-100' : ($isFail ? 'bg-red-100' : 'bg-blue-100');
                     $textColor = $isSuccess ? 'text-green-600' : ($isFail ? 'text-red-600' : 'text-blue-600');
-                    $icon = $isSuccess ? '✔' : ($isFail ? '✖' : 'ℹ');
+                    $iconPath = $isSuccess
+                        ? 'M5 13l4 4L19 7'
+                        : ($isFail
+                            ? 'M6 18L18 6M6 6l12 12'
+                            : 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z');
                 @endphp
           <div class="flex items-center gap-4">
 
-            <div class="w-14 h-14 shrink-0 rounded-2xl {{ $bgColor }} flex items-center justify-center {{ $textColor }} text-xl">
-              {{ $icon }}
+            <div class="w-14 h-14 shrink-0 rounded-2xl {{ $bgColor }} flex items-center justify-center {{ $textColor }}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconPath }}" />
+              </svg>
             </div>
 
             <div class="overflow-hidden">

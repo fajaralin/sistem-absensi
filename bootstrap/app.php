@@ -16,5 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, \Illuminate\Http\Request $request) {
+            if ($e->getStatusCode() === 419) {
+                return redirect()->route('login')->withErrors([
+                    'email' => 'Sesi Anda telah berakhir. Silakan login kembali untuk melanjutkan.',
+                ]);
+            }
+        });
     })->create();
