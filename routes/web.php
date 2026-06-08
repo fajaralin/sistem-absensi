@@ -13,6 +13,7 @@ Route::get('/', [PublicAbsensiController::class, 'index'])->name('kios-absensi')
 Route::post('/absensi/search', [PublicAbsensiController::class, 'searchSiswa'])->name('absensi.search');
 Route::get('/absensi/suggest', [PublicAbsensiController::class, 'suggestSiswa'])->name('absensi.suggest');
 Route::post('/absensi/scan', [PublicAbsensiController::class, 'scan'])->name('absensi.scan');
+Route::post('/absensi/scan-auto', [PublicAbsensiController::class, 'scanAuto'])->name('absensi.scan-auto');
 
 // Guest Routes (Authentication Admin)
 Route::middleware('guest')->group(function () {

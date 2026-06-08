@@ -85,10 +85,33 @@ class AttendanceService
     }
 
     /**
+     * Tolak presensi jika dilakukan sebelum "Jam Mulai Presensi" (gerbang presensi belum dibuka).
+     * Mengembalikan array pesan error jika gerbang belum dibuka, atau null jika sudah boleh presensi.
+     */
+    protected function checkAttendanceGateOpen(): ?array
+    {
+        $startTime = $this->settingService->getAttendanceStartTime();
+        $now = now()->format('H:i');
+
+        if ($now < $startTime) {
+            return [
+                'success' => false,
+                'message' => "Presensi belum dibuka. Gerbang presensi akan dibuka pukul {$startTime} WIB. Silakan coba lagi nanti."
+            ];
+        }
+
+        return null;
+    }
+
+    /**
      * Logika presensi mandiri siswa berbasis Face Recognition di Kios Publik Lobi Sekolah
      */
     public function scanFacePresenceByNisn(string $nisn, string $imageBase64)
     {
+        if ($gateError = $this->checkAttendanceGateOpen()) {
+            return $gateError;
+        }
+
         // 1. Cari data siswa berdasarkan NISN
         $student = $this->studentRepo->findByNisn($nisn);
         if (!$student) {
@@ -197,10 +220,120 @@ class AttendanceService
     }
 
     /**
+     * Presensi Kios Publik tanpa input NISN/nama: siswa langsung scan, sistem mengidentifikasi
+     * sendiri siapa yang sedang berdiri di depan kamera (1-to-many face identification).
+     */
+    public function scanFacePresenceAuto(string $imageBase64)
+    {
+        if ($gateError = $this->checkAttendanceGateOpen()) {
+            return $gateError;
+        }
+
+        // 1. Minta Python AI Engine mengidentifikasi wajah dari seluruh siswa terdaftar
+        $apiResult = $this->faceRecognitionService->identify($imageBase64);
+
+        if (!$apiResult['success']) {
+            $this->logRepo->logActivity(
+                null,
+                'scan_face_failed',
+                'Identifikasi wajah gagal: ' . ($apiResult['message'] ?? 'wajah tidak dikenali di database biometrik.')
+            );
+
+            return [
+                'success' => false,
+                'message' => $apiResult['message'] ?? 'Wajah tidak dikenali. Pastikan Anda sudah terdaftar dan posisikan wajah dengan jelas.'
+            ];
+        }
+
+        // 2. Cocokkan NISN hasil identifikasi dengan data siswa
+        $identifiedNisn = $apiResult['nisn'] ?? $apiResult['name'] ?? null;
+        $student = $identifiedNisn ? $this->studentRepo->findByNisn($identifiedNisn) : null;
+
+        if (!$student) {
+            $this->logRepo->logActivity(
+                null,
+                'scan_face_failed',
+                "Wajah teridentifikasi (NISN: {$identifiedNisn}) namun profil siswa tidak ditemukan di database."
+            );
+
+            return [
+                'success' => false,
+                'message' => 'Wajah dikenali namun profil siswa tidak ditemukan. Silakan hubungi admin sekolah.'
+            ];
+        }
+
+        $student->load('user');
+
+        if ($student->status !== 'active') {
+            return [
+                'success' => false,
+                'message' => 'Status siswa tidak aktif. Silakan hubungi admin.'
+            ];
+        }
+
+        $confidence = $apiResult['confidence'] ?? 0.0;
+
+        // 3. Cek apakah hari ini sudah melakukan presensi
+        $todayPresence = $this->attendanceRepo->findByStudentAndDate($student->id, today()->toDateString());
+        if ($todayPresence && $todayPresence->status !== 'alpha') {
+            return [
+                'success' => false,
+                'already_present' => true,
+                'message' => 'Anda sudah melakukan presensi hari ini pada jam ' . Carbon::parse($todayPresence->check_in)->format('H:i') . ' WIB.',
+                'name' => $student->user->name
+            ];
+        }
+
+        // 4. Simpan snapshot webcam presensi (untuk pembuktian/audit)
+        $snapshotPath = $this->saveAttendanceSnapshot($student->nisn, $imageBase64);
+
+        // 5. Tentukan status (hadir/telat) berdasarkan jam check-in vs batas telat di Pengaturan
+        $checkInTime = now()->toTimeString();
+        $status = $this->settingService->resolveAttendanceStatus($checkInTime);
+
+        $attendanceData = [
+            'check_in' => $checkInTime,
+            'status' => $status,
+            'confidence' => $confidence,
+            'face_image_path' => $snapshotPath,
+            'method' => 'face_recognition',
+        ];
+
+        if ($todayPresence) {
+            $this->attendanceRepo->update($todayPresence->id, $attendanceData);
+        } else {
+            $this->attendanceRepo->create(array_merge($attendanceData, [
+                'student_id' => $student->id,
+                'date' => today()->toDateString(),
+            ]));
+        }
+
+        $this->logRepo->logActivity(
+            null,
+            'scan_face_success',
+            "Presensi sukses via Face Recognition (auto-identify) untuk NISN {$student->nisn} ({$student->user->name}) status: {$status} [Confidence: " . number_format($confidence * 100, 1) . "%]"
+        );
+
+        return [
+            'success' => true,
+            'message' => $status === 'telat'
+                ? "Presensi tercatat TELAT, halo {$student->user->name}. Mohon datang lebih awal lain kali ya!"
+                : "Presensi berhasil, halo {$student->user->name}",
+            'name' => $student->user->name,
+            'status' => $status,
+            'confidence' => $confidence
+        ];
+    }
+
+    /**
      * Logika presensi mandiri mahasiswa berbasis Face Recognition
      */
     public function scanFacePresence(int $userId, string $imageBase64)
     {
+        if ($gateError = $this->checkAttendanceGateOpen()) {
+            return $gateError;
+        }
+
         // 1. Cari data mahasiswa berdasarkan user_id
         $student = $this->studentRepo->allWithUser()->where('user_id', $userId)->first();
         if (!$student) {

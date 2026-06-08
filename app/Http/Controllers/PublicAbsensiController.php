@@ -106,6 +106,33 @@ class PublicAbsensiController extends Controller
     }
 
     /**
+     * AJAX POST endpoint untuk scan langsung tanpa input NISN/nama.
+     * Sistem mengidentifikasi sendiri siswa mana yang sedang scan (1-to-many).
+     */
+    public function scanAuto(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|string' // base64 string
+        ]);
+
+        try {
+            $result = $this->attendanceService->scanFacePresenceAuto($request->image);
+
+            if ($result['success']) {
+                return response()->json($result);
+            }
+
+            return response()->json($result, 422);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * AJAX GET endpoint untuk mendapatkan saran siswa berdasarkan nama.
      */
     public function suggestSiswa(Request $request)

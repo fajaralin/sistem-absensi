@@ -63,6 +63,44 @@ class FaceRecognitionService implements FaceRecognitionServiceInterface
     }
 
     /**
+     * Kirim gambar wajah (base64) ke Python AI Engine untuk diidentifikasi 1-to-many
+     * (tanpa NISN/nama — Python akan mencocokkan terhadap seluruh wajah master terdaftar).
+     */
+    public function identify(string $imageBase64): array
+    {
+        try {
+            if (preg_match('/^data:image\/(\w+);base64,/', $imageBase64, $type)) {
+                $imageBase64 = substr($imageBase64, strpos($imageBase64, ',') + 1);
+            }
+
+            $response = Http::timeout(8)
+                ->post("{$this->apiUrl}/identify", [
+                    'image' => $imageBase64
+                ]);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Python API Server error (' . $response->status() . ')',
+                'confidence' => 0.0
+            ];
+
+        } catch (\Exception $e) {
+            Log::error("FaceRecognitionService identify failed: " . $e->getMessage());
+
+            return [
+                'success' => false,
+                'message' => 'Python API tidak aktif (Koneksi terputus: ' . $e->getMessage() . ')',
+                'confidence' => 0.0,
+                'offline' => true
+            ];
+        }
+    }
+
+    /**
      * Kirim data wajah (base64) ke Python AI Engine untuk didaftarkan sebagai master face.
      */
     public function registerFace(string $nisn, string $imageBase64): array

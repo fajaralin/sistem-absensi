@@ -2,5 +2,13 @@
     "0089123456": {
         "registered_at": "2026-05-20 13:01:28",
         "image_path": "faces_dataset\\0089123456.png"
+    },
+    "0076543458": {
+        "registered_at": "2026-06-09 00:37:16",
+        "image_path": "faces_dataset/0076543458.png"
+    },
+    "0066543458": {
+        "registered_at": "2026-06-09 00:39:24",
+        "image_path": "faces_dataset/0066543458.png"
     }
 }

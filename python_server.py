@@ -117,7 +117,7 @@ def print_banner():
 {green}[SYSTEM] OpenCV Version: {cv2.__version__} successfully initialized.{reset}
 {green}[SYSTEM] Model Haar Cascades Frontal Face XML loaded successfully.{reset}
 {green}[SYSTEM] Membaca dataset wajah master dari {DATABASE_FILE}...{reset}
-{yellow}[SYSTEM] AI Engine aktif! Mendengarkan request API di http://127.0.0.1:5000{reset}
+{yellow}[SYSTEM] AI Engine aktif! Mendengarkan request API di http://127.0.0.1:5001{reset}
 ====================================================================
 """
     print(banner)
@@ -532,6 +532,144 @@ def recognize():
         add_log("RECOGNIZE_ERROR", f"Error runtime engine: {str(e)}", "FAILED")
         return jsonify({'success': False, 'message': str(e), 'confidence': 0.0}), 500
 
+@app.route('/identify', methods=['POST'])
+def identify():
+    """Proses identifikasi wajah biometrik 1-to-many (Scan langsung tanpa input NISN/Nama)."""
+    if system_config['delay_seconds'] > 0:
+        time.sleep(system_config['delay_seconds'])
+
+    try:
+        data = request.get_json()
+        if not data or 'image' not in data:
+            add_log("IDENTIFY_FAILED", "Menerima request scan kosong atau tanpa payload gambar.", "FAILED")
+            return jsonify({'success': False, 'message': 'Payload image base64 wajib diisi.'}), 400
+
+        image_b64 = data['image']
+        mode = system_config['mode']
+
+        if mode == 'force_fail':
+            print("\033[91m[API - IDENTIFY] Paksa Gagal Aktif.\033[0m")
+            add_log("IDENTIFY_FAILED", "Mode Paksa Gagal aktif. Scan dibatalkan secara sistem.", "FAILED")
+            return jsonify({
+                'success': False,
+                'nisn': '',
+                'name': '',
+                'confidence': 0.15,
+                'message': 'Wajah tidak dikenali. Tidak ada profil yang cocok dengan database biometrik.'
+            })
+
+        # Mode paksa (override panel kontrol) langsung mengarahkan ke NISN target tertentu
+        forced_nisn = None
+        if mode == 'force_budi':
+            forced_nisn = '0089123456'
+        elif mode == 'force_siti':
+            forced_nisn = '0089123457'
+        elif mode == 'auto_first':
+            faces_db = get_registered_faces()
+            if faces_db:
+                forced_nisn = list(faces_db.keys())[0]
+
+        img = decode_base64_image(image_b64)
+        if img is None:
+            add_log("IDENTIFY_FAILED", "Menerima format gambar tidak valid.", "FAILED")
+            return jsonify({'success': False, 'message': 'Format gambar tidak valid.', 'confidence': 0.0})
+
+        live_face = extract_face(img)
+        if live_face is None:
+            print("\033[91m[API - IDENTIFY] Wajah tidak terdeteksi di kamera.\033[0m")
+            add_log("IDENTIFY_FAILED", "Scan Ditolak: Wajah tidak terdeteksi atau terhalang.", "FAILED")
+            return jsonify({
+                'success': False,
+                'nisn': '',
+                'name': '',
+                'confidence': 0.0,
+                'message': 'Wajah tidak terdeteksi di kamera. Pastikan posisi wajah Anda tegak lurus.'
+            })
+
+        # Kumpulkan seluruh wajah master terdaftar untuk perbandingan 1-to-many
+        registered = get_registered_faces()
+        master_faces = []
+        labels = []
+        label_to_nisn = {}
+        next_label = 1
+        for nisn in registered.keys():
+            master_path = os.path.join(FACES_DATASET_DIR, f"{nisn}.png")
+            if not os.path.exists(master_path):
+                continue
+            master_face = cv2.imread(master_path, cv2.IMREAD_GRAYSCALE)
+            if master_face is None:
+                continue
+            master_faces.append(master_face)
+            labels.append(next_label)
+            label_to_nisn[next_label] = nisn
+            next_label += 1
+
+        if not master_faces:
+            add_log("IDENTIFY_FAILED", "Tidak ada wajah master yang terdaftar di dataset biometrik.", "FAILED")
+            return jsonify({
+                'success': False,
+                'nisn': '',
+                'name': '',
+                'confidence': 0.0,
+                'message': 'Belum ada data wajah master yang terdaftar di sistem.'
+            })
+
+        try:
+            # Latih recognizer dengan SELURUH wajah master (multi-label) lalu cari label dengan jarak terdekat
+            recognizer = cv2.face.LBPHFaceRecognizer_create()
+            recognizer.train(master_faces, np.array(labels))
+
+            label, distance = recognizer.predict(live_face)
+            matched_nisn = label_to_nisn.get(label)
+
+            if forced_nisn:
+                matched_nisn = forced_nisn
+                distance = 30.0
+
+            if distance < 68.0 and matched_nisn:
+                confidence_percentage = int(100 - (distance * 0.45))
+                recognized_name = 'Siswa Terdaftar'
+                if matched_nisn == '0089123456':
+                    recognized_name = 'Budi Handoko'
+                elif matched_nisn == '0089123457':
+                    recognized_name = 'Siti Aminah'
+
+                print(f"\033[92m[API - IDENTIFY] Wajah Teridentifikasi! NISN: {matched_nisn} ({recognized_name}) | Distance: {distance:.2f} | Confidence: {confidence_percentage}%\033[0m")
+                add_log("IDENTIFY_SUCCESS", f"Wajah teridentifikasi sebagai NISN {matched_nisn} ({recognized_name}) dengan akurasi biometrik {confidence_percentage}% (Jarak: {distance:.1f}).")
+                return jsonify({
+                    'success': True,
+                    'nisn': matched_nisn,
+                    'name': matched_nisn,
+                    'confidence': float(confidence_percentage) / 100.0,
+                    'message': 'Face identified successfully.'
+                })
+            else:
+                confidence_percentage = max(0, int(60 - ((distance - 68.0) * 3.0)))
+                print(f"\033[91m[API - IDENTIFY] Wajah TIDAK Dikenali! Distance terdekat: {distance:.2f} | Confidence: {confidence_percentage}%\033[0m")
+                add_log("IDENTIFY_FAILED", f"Wajah tidak ditemukan kecocokan di database biometrik. Jarak terdekat: {distance:.1f} (Akurasi: {confidence_percentage}%).", "FAILED")
+                return jsonify({
+                    'success': False,
+                    'nisn': '',
+                    'name': '',
+                    'confidence': float(confidence_percentage) / 100.0,
+                    'message': 'Wajah tidak dikenali. Pastikan Anda sudah terdaftar dan posisikan wajah dengan jelas menghadap kamera.'
+                })
+
+        except Exception as err:
+            print(f"[IDENTIFY ALGO ERROR] Gagal menjalankan LBPH Recognizer: {str(err)}")
+            return jsonify({
+                'success': False,
+                'nisn': '',
+                'name': '',
+                'confidence': 0.0,
+                'message': f'System biometric error: {str(err)}'
+            }), 500
+
+    except Exception as e:
+        print(f"\033[91m[API - ERROR] Gagal melakukan identifikasi: {str(e)}\033[0m")
+        add_log("IDENTIFY_ERROR", f"Error runtime engine: {str(e)}", "FAILED")
+        return jsonify({'success': False, 'message': str(e), 'confidence': 0.0}), 500
+
 if __name__ == '__main__':
     print_banner()
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='127.0.0.1', port=5001, debug=True)
