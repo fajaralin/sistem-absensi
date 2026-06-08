@@ -5,22 +5,26 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Services\AttendanceService;
 use App\Services\StudentService;
+use App\Services\SettingService;
 use Illuminate\Http\Request;
 
 class AttendanceController extends Controller
 {
     protected $attendanceService;
     protected $studentService;
+    protected $settingService;
 
     /**
      * AttendanceController constructor.
      */
     public function __construct(
         AttendanceService $attendanceService,
-        StudentService $studentService
+        StudentService $studentService,
+        SettingService $settingService
     ) {
         $this->attendanceService = $attendanceService;
         $this->studentService = $studentService;
+        $this->settingService = $settingService;
     }
 
     /**
@@ -41,6 +45,24 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Tampilkan rekap kehadiran per kelas/jurusan dengan filter rentang tanggal.
+     */
+    public function recap(Request $request)
+    {
+        $startDate = $request->get('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->get('end_date', now()->toDateString());
+
+        $recap = $this->attendanceService->getClassRecap($startDate, $endDate);
+
+        $filters = [
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+        ];
+
+        return view('admin.attendance.recap', compact('recap', 'filters'));
+    }
+
+    /**
      * Simpan data presensi secara manual oleh admin.
      */
     public function storeManual(Request $request)
@@ -48,7 +70,7 @@ class AttendanceController extends Controller
         $validated = $request->validate([
             'student_id' => 'required|exists:students,id',
             'date' => 'required|date',
-            'status' => 'required|in:hadir,sakit,izin,alpha',
+            'status' => 'required|in:hadir,telat,sakit,izin,alpha',
             'check_in' => 'nullable|string',
             'notes' => 'nullable|string'
         ]);
@@ -141,8 +163,9 @@ class AttendanceController extends Controller
 
         $attendances = $this->attendanceService->getAttendancesWithFilters($filters);
         $dateLabel = $filters['date'] ? \Carbon\Carbon::parse($filters['date'])->translatedFormat('d F Y') : 'Semua Tanggal';
+        $schoolInfo = $this->settingService->getSchoolInfo();
 
-        return view('admin.attendance.print', compact('attendances', 'dateLabel', 'filters'));
+        return view('admin.attendance.print', compact('attendances', 'dateLabel', 'filters', 'schoolInfo'));
     }
 
     /**

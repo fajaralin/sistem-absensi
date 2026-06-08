@@ -6,6 +6,7 @@ use App\Http\Controllers\PublicAbsensiController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\StudentCRUDController;
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
+use App\Http\Controllers\Admin\SettingController;
 
 // Halaman utama Kios Absensi Publik Siswa
 Route::get('/', [PublicAbsensiController::class, 'index'])->name('kios-absensi');
@@ -42,7 +43,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::delete('/attendance/{id}', [AdminAttendanceController::class, 'destroy'])->name('attendance.destroy');
     Route::get('/attendance/export/csv', [AdminAttendanceController::class, 'exportCsv'])->name('attendance.export.csv');
     Route::get('/attendance/export/pdf', [AdminAttendanceController::class, 'exportPdf'])->name('attendance.export.pdf');
+    Route::get('/attendance/recap', [AdminAttendanceController::class, 'recap'])->name('attendance.recap');
 
     // Logs aktivitas sistem
     Route::get('/logs', [AdminDashboardController::class, 'logs'])->name('logs');
+
+    // Pengaturan sistem (jam presensi, identitas sekolah untuk kop surat, dll)
+    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+    Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
 });

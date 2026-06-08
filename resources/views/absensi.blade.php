@@ -306,8 +306,8 @@
             class="card w-full max-w-md bg-white/95 backdrop-blur-md border border-base-200 shadow-2xl relative biometric-glow overflow-hidden rounded-[2rem]">
             <div class="card-body p-8 text-center space-y-6">
             
-            <!-- Success Icon & Header -->
-            <template x-if="presenceResult.success">
+            <!-- Success Icon & Header (Hadir tepat waktu) -->
+            <template x-if="presenceResult.success && presenceResult.status !== 'telat'">
                 <div class="space-y-6">
                     <div class="inline-flex p-5 bg-emerald-50 text-success rounded-full border border-emerald-100 text-5xl animate-bounce shadow-md">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -318,7 +318,7 @@
                         <h2 class="text-xl font-bold text-emerald-600 tracking-tight">Presensi Berhasil!</h2>
                         <p class="text-sm text-base-content/85 font-semibold" x-text="presenceResult.message"></p>
                     </div>
-                    
+
                     <!-- Metrics -->
                     <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto bg-emerald-50/50 p-4 rounded-xl border border-emerald-100/50 text-xs">
                         <div class="text-left space-y-1">
@@ -327,6 +327,33 @@
                         </div>
                         <div class="text-left space-y-1 border-l border-emerald-100/60 pl-4">
                             <span class="text-[9px] font-bold text-emerald-700/60 uppercase tracking-wider">Tipe Detektor</span>
+                            <div class="font-bold text-neutral-800 text-xs mt-0.5">Biometrik Wajah</div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Success but Late Icon & Header (Hadir TELAT) -->
+            <template x-if="presenceResult.success && presenceResult.status === 'telat'">
+                <div class="space-y-6">
+                    <div class="inline-flex p-5 bg-amber-50 text-warning rounded-full border border-amber-100 text-5xl animate-bounce shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="space-y-2">
+                        <h2 class="text-xl font-bold text-amber-600 tracking-tight">Presensi Tercatat — Terlambat</h2>
+                        <p class="text-sm text-base-content/85 font-semibold" x-text="presenceResult.message"></p>
+                    </div>
+
+                    <!-- Metrics -->
+                    <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto bg-amber-50/50 p-4 rounded-xl border border-amber-100/50 text-xs">
+                        <div class="text-left space-y-1">
+                            <span class="text-[9px] font-bold text-amber-700/60 uppercase tracking-wider">Akurasi Pencocokan</span>
+                            <div class="font-mono font-bold text-primary text-base" x-text="formatConfidence(presenceResult.confidence)"></div>
+                        </div>
+                        <div class="text-left space-y-1 border-l border-amber-100/60 pl-4">
+                            <span class="text-[9px] font-bold text-amber-700/60 uppercase tracking-wider">Tipe Detektor</span>
                             <div class="font-bold text-neutral-800 text-xs mt-0.5">Biometrik Wajah</div>
                         </div>
                     </div>
@@ -412,6 +439,7 @@
                     success: false,
                     message: '',
                     name: '',
+                    status: '',
                     confidence: 0.0
                 },
                 
@@ -579,6 +607,7 @@
                             success: result.success,
                             message: result.message,
                             name: result.name || '',
+                            status: result.status || '',
                             confidence: result.confidence || 0.0
                         };
 
@@ -617,7 +646,9 @@
                         window.speechSynthesis.cancel(); // Cancel any ongoing voices
                         
                         let text = '';
-                        if (result.success) {
+                        if (result.success && result.status === 'telat') {
+                            text = `Presensi tercatat, namun Anda terlambat, halo ${result.name}. Mohon datang lebih awal lain kali ya.`;
+                        } else if (result.success) {
                             text = `Presensi berhasil. Halo ${result.name}. Selamat belajar!`;
                         } else {
                             text = result.message || "Wajah tidak dikenali, silakan coba scan lagi.";

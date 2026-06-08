@@ -40,10 +40,10 @@ class DashboardController extends Controller
         $totalStudents = $students->count();
         $activeStudentsCount = $students->where('status', 'active')->count();
 
-        // 3. Hitung persentase kehadiran hari ini
+        // 3. Hitung persentase kehadiran hari ini (Hadir + Telat dianggap tetap masuk)
         $attendancePercentage = 0;
         if ($activeStudentsCount > 0) {
-            $attendancePercentage = ($stats['hadir'] / $activeStudentsCount) * 100;
+            $attendancePercentage = (($stats['hadir'] + $stats['telat']) / $activeStudentsCount) * 100;
         }
 
         // 4. Dapatkan 5 log aktivitas terbaru
@@ -52,13 +52,17 @@ class DashboardController extends Controller
         // 5. Dapatkan list presensi hari ini
         $todayPresences = $this->attendanceService->getTodayAttendances()->take(5);
 
+        // 6. Dapatkan tren presensi 14 hari terakhir untuk grafik dashboard
+        $attendanceTrend = $this->attendanceService->getAttendanceTrend(14);
+
         return view('admin.dashboard', compact(
             'stats',
             'totalStudents',
             'activeStudentsCount',
             'attendancePercentage',
             'recentLogs',
-            'todayPresences'
+            'todayPresences',
+            'attendanceTrend'
         ));
     }
 

@@ -66,9 +66,9 @@
                 🏫
             </div>
             <div>
-                <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 uppercase">SMA NEGERI 1 UTAMA</h1>
+                <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 uppercase">{{ $schoolInfo['name'] }}</h1>
                 <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Bidang Kurikulum & Pembinaan Kesiswaan &bull; Tata Usaha Akademik</p>
-                <p class="text-xs text-slate-400 mt-0.5">Jl. Raya Utama No. 123, Jakarta Selatan | Telp: (021) 555-1234 &bull; Email: info@sman1utama.sch.id</p>
+                <p class="text-xs text-slate-400 mt-0.5">{{ $schoolInfo['address'] }} | Telp: {{ $schoolInfo['phone'] }} &bull; Email: {{ $schoolInfo['email'] }}</p>
             </div>
         </div>
         <div class="text-right">
@@ -133,6 +133,8 @@
                         <td class="py-3 px-4 border-r border-slate-200 text-center">
                             @if($att->status === 'hadir')
                                 <span class="px-2.5 py-1 text-xs font-extrabold uppercase rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">HADIR</span>
+                            @elseif($att->status === 'telat')
+                                <span class="px-2.5 py-1 text-xs font-extrabold uppercase rounded-full bg-orange-100 text-orange-800 border border-orange-200">TELAT</span>
                             @elseif($att->status === 'sakit')
                                 <span class="px-2.5 py-1 text-xs font-extrabold uppercase rounded-full bg-amber-100 text-amber-800 border border-amber-200">SAKIT</span>
                             @elseif($att->status === 'izin')
@@ -167,10 +169,10 @@
     <div class="print-break-inside-avoid grid grid-cols-2 gap-12 mt-16 text-sm font-semibold text-slate-800">
         <div class="text-center">
             <p class="text-slate-400 uppercase tracking-wider text-xs font-bold">Mengetahui,</p>
-            <p class="mt-1 font-bold text-slate-900">Kepala Sekolah SMA Negeri 1 Utama</p>
+            <p class="mt-1 font-bold text-slate-900">Kepala Sekolah {{ $schoolInfo['name'] }}</p>
             <div class="h-24"></div>
-            <p class="font-extrabold text-slate-900 border-b border-slate-400 inline-block px-8 pb-1">Drs. H. Mulyadi, M.Pd.</p>
-            <p class="text-xs text-slate-400 mt-1 font-mono">NIP. 19680515 199303 1 003</p>
+            <p class="font-extrabold text-slate-900 border-b border-slate-400 inline-block px-8 pb-1">{{ $schoolInfo['principal_name'] }}</p>
+            <p class="text-xs text-slate-400 mt-1 font-mono">NIP. {{ $schoolInfo['principal_nip'] }}</p>
         </div>
         <div class="text-center">
             <p class="text-slate-400 uppercase tracking-wider text-xs font-bold">Petugas Administrasi,</p>

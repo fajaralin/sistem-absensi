@@ -108,11 +108,16 @@
         </a>
 
         <a href="{{ route('admin.face-data.index') }}" class="sidebar-item {{ request()->routeIs('admin.face-data.*') ? 'active-menu' : 'text-slate-700' }} w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium">
-          <span>📅</span>
-          Jadwal
+          <span>🗂️</span>
+          Galeri Wajah
         </a>
 
         <a href="{{ route('admin.logs') }}" class="sidebar-item {{ request()->routeIs('admin.logs') ? 'active-menu' : 'text-slate-700' }} w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium">
+          <span>📋</span>
+          Log Aktivitas
+        </a>
+
+        <a href="{{ route('admin.settings.index') }}" class="sidebar-item {{ request()->routeIs('admin.settings.*') ? 'active-menu' : 'text-slate-700' }} w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-medium">
           <span>⚙️</span>
           Pengaturan
         </a>

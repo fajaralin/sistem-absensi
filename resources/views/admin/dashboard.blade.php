@@ -90,7 +90,7 @@
 
         <div class="flex items-center gap-2">
           <span class="text-white/70 text-sm">
-            Sakit: {{ $stats['sakit'] }}, Izin: {{ $stats['izin'] }}
+            Telat: {{ $stats['telat'] }}, Sakit: {{ $stats['sakit'] }}, Izin: {{ $stats['izin'] }}
           </span>
         </div>
 
@@ -109,6 +109,47 @@
 
         <div class="mt-6 bg-white/20 rounded-full h-3 overflow-hidden">
           <div class="bg-white h-full w-[99%] rounded-full"></div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TREN KEHADIRAN -->
+    <section class="mb-8">
+
+      <div class="card p-6 md:p-8 rounded-[24px] border border-slate-200/60 shadow-sm">
+
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl gradient-card flex items-center justify-center text-white text-2xl shadow-lg">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14"></path></svg>
+            </div>
+
+            <div>
+              <h2 class="text-2xl font-bold text-slate-800">
+                Tren Kehadiran 14 Hari Terakhir
+              </h2>
+              <p class="text-slate-400 text-sm">
+                Rekap jumlah status presensi siswa per hari
+              </p>
+            </div>
+          </div>
+
+          <!-- LEGEND -->
+          <div class="flex flex-wrap items-center gap-4 text-sm">
+            <span class="flex items-center gap-2 text-slate-500"><span class="w-3 h-3 rounded-full" style="background:#10b981"></span> Hadir</span>
+            <span class="flex items-center gap-2 text-slate-500"><span class="w-3 h-3 rounded-full" style="background:#f59e0b"></span> Telat</span>
+            <span class="flex items-center gap-2 text-slate-500"><span class="w-3 h-3 rounded-full" style="background:#eab308"></span> Sakit</span>
+            <span class="flex items-center gap-2 text-slate-500"><span class="w-3 h-3 rounded-full" style="background:#3b82f6"></span> Izin</span>
+            <span class="flex items-center gap-2 text-slate-500"><span class="w-3 h-3 rounded-full" style="background:#f43f5e"></span> Alpha</span>
+          </div>
+
+        </div>
+
+        <div class="relative h-[320px] md:h-[380px]">
+          <canvas id="attendanceTrendChart"></canvas>
         </div>
 
       </div>
@@ -245,4 +286,101 @@
 
     </section>
 
+@endsection
+
+@section('scripts')
+    <!-- Chart.js untuk grafik tren kehadiran -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const trendData = @json($attendanceTrend);
+
+            const labels = trendData.map(item => item.label);
+
+            const ctx = document.getElementById('attendanceTrendChart');
+            if (!ctx) return;
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Hadir',
+                            data: trendData.map(item => item.hadir),
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            tension: 0.35,
+                            fill: true,
+                        },
+                        {
+                            label: 'Telat',
+                            data: trendData.map(item => item.telat),
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                            tension: 0.35,
+                            fill: true,
+                        },
+                        {
+                            label: 'Sakit',
+                            data: trendData.map(item => item.sakit),
+                            borderColor: '#eab308',
+                            backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                            tension: 0.35,
+                            fill: true,
+                        },
+                        {
+                            label: 'Izin',
+                            data: trendData.map(item => item.izin),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                            tension: 0.35,
+                            fill: true,
+                        },
+                        {
+                            label: 'Alpha',
+                            data: trendData.map(item => item.alpha),
+                            borderColor: '#f43f5e',
+                            backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                            tension: 0.35,
+                            fill: true,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false,
+                            },
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                            },
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.15)',
+                            },
+                        },
+                    },
+                },
+            });
+        });
+    </script>
 @endsection

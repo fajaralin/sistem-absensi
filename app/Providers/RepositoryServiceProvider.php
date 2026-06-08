@@ -13,6 +13,8 @@ use App\Repositories\Contracts\FaceDataRepositoryInterface;
 use App\Repositories\Eloquent\FaceDataRepository;
 use App\Repositories\Contracts\LogRepositoryInterface;
 use App\Repositories\Eloquent\LogRepository;
+use App\Repositories\Contracts\SettingRepositoryInterface;
+use App\Repositories\Eloquent\SettingRepository;
 use App\Services\Contracts\FaceRecognitionServiceInterface;
 use App\Services\Eloquent\FaceRecognitionService;
 
@@ -28,6 +30,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(AttendanceRepositoryInterface::class, AttendanceRepository::class);
         $this->app->bind(FaceDataRepositoryInterface::class, FaceDataRepository::class);
         $this->app->bind(LogRepositoryInterface::class, LogRepository::class);
+        $this->app->bind(SettingRepositoryInterface::class, SettingRepository::class);
         $this->app->bind(FaceRecognitionServiceInterface::class, FaceRecognitionService::class);
     }
 

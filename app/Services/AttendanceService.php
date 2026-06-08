@@ -6,6 +6,7 @@ use App\Repositories\Contracts\AttendanceRepositoryInterface;
 use App\Repositories\Contracts\StudentRepositoryInterface;
 use App\Repositories\Contracts\LogRepositoryInterface;
 use App\Services\Contracts\FaceRecognitionServiceInterface;
+use App\Services\SettingService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,7 @@ class AttendanceService
     protected $studentRepo;
     protected $logRepo;
     protected $faceRecognitionService;
+    protected $settingService;
 
     /**
      * AttendanceService constructor.
@@ -24,12 +26,14 @@ class AttendanceService
         AttendanceRepositoryInterface $attendanceRepo,
         StudentRepositoryInterface $studentRepo,
         LogRepositoryInterface $logRepo,
-        FaceRecognitionServiceInterface $faceRecognitionService
+        FaceRecognitionServiceInterface $faceRecognitionService,
+        SettingService $settingService
     ) {
         $this->attendanceRepo = $attendanceRepo;
         $this->studentRepo = $studentRepo;
         $this->logRepo = $logRepo;
         $this->faceRecognitionService = $faceRecognitionService;
+        $this->settingService = $settingService;
     }
 
     /**
@@ -62,6 +66,22 @@ class AttendanceService
     public function getTodayStats()
     {
         return $this->attendanceRepo->getTodayStats();
+    }
+
+    /**
+     * Dapatkan tren kehadiran N hari terakhir (untuk grafik dashboard).
+     */
+    public function getAttendanceTrend(int $days = 7)
+    {
+        return $this->attendanceRepo->getAttendanceTrend($days);
+    }
+
+    /**
+     * Dapatkan rekap agregat kehadiran per kelas/jurusan dalam rentang tanggal tertentu.
+     */
+    public function getClassRecap(string $startDate, string $endDate)
+    {
+        return $this->attendanceRepo->getClassRecap($startDate, $endDate);
     }
 
     /**
@@ -123,39 +143,42 @@ class AttendanceService
         }
 
         if ($isMatch) {
-            // 4. Catat kehadiran di database
+            // 4. Tentukan status (hadir/telat) berdasarkan jam check-in vs batas telat di Pengaturan
+            $checkInTime = now()->toTimeString();
+            $status = $this->settingService->resolveAttendanceStatus($checkInTime);
+
+            $attendanceData = [
+                'check_in' => $checkInTime,
+                'status' => $status,
+                'confidence' => $confidence,
+                'face_image_path' => $snapshotPath,
+                'method' => 'face_recognition',
+            ];
+
             if ($todayPresence) {
                 // Jika record dummy 'alpha' sudah ada, kita update
-                $this->attendanceRepo->update($todayPresence->id, [
-                    'check_in' => now()->toTimeString(),
-                    'status' => 'hadir',
-                    'confidence' => $confidence,
-                    'face_image_path' => $snapshotPath,
-                    'method' => 'face_recognition',
-                ]);
+                $this->attendanceRepo->update($todayPresence->id, $attendanceData);
             } else {
-                $this->attendanceRepo->create([
+                $this->attendanceRepo->create(array_merge($attendanceData, [
                     'student_id' => $student->id,
                     'date' => today()->toDateString(),
-                    'check_in' => now()->toTimeString(),
-                    'status' => 'hadir',
-                    'confidence' => $confidence,
-                    'face_image_path' => $snapshotPath,
-                    'method' => 'face_recognition'
-                ]);
+                ]));
             }
 
             // Catat log aktivitas sukses (user_id = null karena kiosk publik)
             $this->logRepo->logActivity(
                 null,
                 'scan_face_success',
-                "Presensi sukses via Face Recognition untuk NISN {$student->nisn} ({$student->user->name}) [Confidence: " . number_format($confidence * 100, 1) . "%]"
+                "Presensi sukses via Face Recognition untuk NISN {$student->nisn} ({$student->user->name}) status: {$status} [Confidence: " . number_format($confidence * 100, 1) . "%]"
             );
 
             return [
                 'success' => true,
-                'message' => "Presensi berhasil, halo {$student->user->name}",
+                'message' => $status === 'telat'
+                    ? "Presensi tercatat TELAT, halo {$student->user->name}. Mohon datang lebih awal lain kali ya!"
+                    : "Presensi berhasil, halo {$student->user->name}",
                 'name' => $student->user->name,
+                'status' => $status,
                 'confidence' => $confidence
             ];
         }
@@ -230,39 +253,42 @@ class AttendanceService
         }
 
         if ($isMatch) {
-            // 4. Catat kehadiran di database
+            // 4. Tentukan status (hadir/telat) berdasarkan jam check-in vs batas telat di Pengaturan
+            $checkInTime = now()->toTimeString();
+            $status = $this->settingService->resolveAttendanceStatus($checkInTime);
+
+            $attendanceData = [
+                'check_in' => $checkInTime,
+                'status' => $status,
+                'confidence' => $confidence,
+                'face_image_path' => $snapshotPath,
+                'method' => 'face_recognition',
+            ];
+
             if ($todayPresence) {
                 // Jika record dummy 'alpha' sudah ada, kita update
-                $this->attendanceRepo->update($todayPresence->id, [
-                    'check_in' => now()->toTimeString(),
-                    'status' => 'hadir',
-                    'confidence' => $confidence,
-                    'face_image_path' => $snapshotPath,
-                    'method' => 'face_recognition',
-                ]);
+                $this->attendanceRepo->update($todayPresence->id, $attendanceData);
             } else {
-                $this->attendanceRepo->create([
+                $this->attendanceRepo->create(array_merge($attendanceData, [
                     'student_id' => $student->id,
                     'date' => today()->toDateString(),
-                    'check_in' => now()->toTimeString(),
-                    'status' => 'hadir',
-                    'confidence' => $confidence,
-                    'face_image_path' => $snapshotPath,
-                    'method' => 'face_recognition'
-                ]);
+                ]));
             }
 
             // Catat log aktivitas sukses
             $this->logRepo->logActivity(
                 $userId,
                 'scan_face_success',
-                "Presensi berhasil dengan face recognition (Confidence: " . number_format($confidence * 100, 1) . "%)"
+                "Presensi berhasil dengan face recognition status: {$status} (Confidence: " . number_format($confidence * 100, 1) . "%)"
             );
 
             return [
                 'success' => true,
-                'message' => "Presensi berhasil, halo {$student->user->name}",
+                'message' => $status === 'telat'
+                    ? "Presensi tercatat TELAT, halo {$student->user->name}. Mohon datang lebih awal lain kali ya!"
+                    : "Presensi berhasil, halo {$student->user->name}",
                 'name' => $student->user->name,
+                'status' => $status,
                 'confidence' => $confidence
             ];
         }
@@ -298,7 +324,7 @@ class AttendanceService
             'student_id' => $student->id,
             'date' => $date,
             'status' => $data['status'],
-            'check_in' => $data['status'] === 'hadir' ? ($data['check_in'] ?? now()->toTimeString()) : null,
+            'check_in' => in_array($data['status'], ['hadir', 'telat']) ? ($data['check_in'] ?? now()->toTimeString()) : null,
             'method' => 'manual',
             'notes' => $data['notes'] ?? null
         ];

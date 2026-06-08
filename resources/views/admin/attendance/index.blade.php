@@ -34,8 +34,17 @@
                         Catat Manual
                     </button>
 
+                    <!-- Rekap per Kelas/Jurusan -->
+                    <a href="{{ route('admin.attendance.recap') }}"
+                        class="btn btn-sm bg-white hover:bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300 normal-case rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17V9m4 8V5m4 12v-4M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        Rekap per Kelas
+                    </a>
+
                     <!-- Export CSV -->
-                    <a href="{{ route('admin.attendance.export.csv', request()->all()) }}" 
+                    <a href="{{ route('admin.attendance.export.csv', request()->all()) }}"
                         class="btn btn-sm bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200/60 hover:border-emerald-300 normal-case rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -70,6 +79,7 @@
                         class="select select-bordered select-sm w-full h-11 rounded-xl text-xs font-semibold focus:border-primary focus:ring-primary/20 bg-white border-slate-200">
                         <option value="">Semua Status</option>
                         <option value="hadir" {{ $filters['status'] === 'hadir' ? 'selected' : '' }}>Hadir</option>
+                        <option value="telat" {{ $filters['status'] === 'telat' ? 'selected' : '' }}>Telat</option>
                         <option value="sakit" {{ $filters['status'] === 'sakit' ? 'selected' : '' }}>Sakit</option>
                         <option value="izin" {{ $filters['status'] === 'izin' ? 'selected' : '' }}>Izin</option>
                         <option value="alpha" {{ $filters['status'] === 'alpha' ? 'selected' : '' }}>Alpha</option>
@@ -142,6 +152,8 @@
                             <td class="px-6 py-4">
                                 @if($att->status === 'hadir')
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100">hadir</span>
+                                @elseif($att->status === 'telat')
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700 border border-orange-100">telat</span>
                                 @elseif($att->status === 'sakit')
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-100">sakit</span>
                                 @elseif($att->status === 'izin')
@@ -286,6 +298,7 @@
                             <select id="manual_status" name="status" required
                                 class="select select-bordered w-full h-11 rounded-xl text-xs font-semibold focus:border-primary focus:ring-primary/20 bg-white border-slate-200">
                                 <option value="hadir">Hadir</option>
+                                <option value="telat">Telat</option>
                                 <option value="sakit">Sakit</option>
                                 <option value="izin">Izin</option>
                                 <option value="alpha">Alpha</option>
