@@ -5,23 +5,23 @@
 
 @section('content')
 <div class="card bg-white border border-slate-200/60 shadow-sm rounded-3xl" x-data="faceEnrollmentManager()">
-    <div class="card-body p-6 md:p-8 space-y-6">
+    <div class="card-body p-6 md:p-8 space-y-6 min-w-0">
         
         <!-- Header Actions -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-100">
-            <div class="flex items-start gap-3">
-                <div class="p-2.5 bg-primary/10 rounded-xl text-primary mt-0.5">
+            <div class="flex items-start gap-3 min-w-0">
+                <div class="p-2.5 bg-primary/10 rounded-xl text-primary mt-0.5 shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <h3 class="font-bold text-neutral-800 text-lg">Daftar Siswa Terdaftar</h3>
                     <p class="text-xs font-semibold text-slate-500 mt-0.5">Kelola data profil akademik dan data biometrik wajah master</p>
                 </div>
             </div>
-            <a href="{{ route('admin.students.create') }}" class="btn btn-md bg-primary hover:bg-primary/90 text-white border-none normal-case rounded-xl font-bold text-xs shadow-md shadow-primary/10 hover:shadow-primary/20 transition-all duration-150 w-full sm:w-auto flex items-center gap-1.5 justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <a href="{{ route('admin.students.create') }}" class="btn btn-md bg-primary hover:bg-primary/90 text-white border-none normal-case rounded-xl font-bold text-xs shadow-md shadow-primary/10 hover:shadow-primary/20 transition-all duration-150 w-full sm:w-auto flex items-center gap-1.5 justify-center shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
                 Tambah Siswa Baru

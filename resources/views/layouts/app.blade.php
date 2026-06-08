@@ -63,7 +63,7 @@
 
 <body>
 
-<div class="flex min-h-screen">
+<div class="min-h-screen">
 
   <!-- SIDEBAR -->
   <aside class="w-[280px] bg-white border-r border-slate-200 p-6 hidden lg:flex flex-col justify-between fixed h-screen overflow-y-auto z-40">
@@ -171,7 +171,7 @@
   </aside>
 
   <!-- MAIN -->
-  <main class="flex-1 p-8 lg:ml-[280px]">
+  <main class="flex-1 p-8 lg:ml-[280px] min-w-0">
 
     <!-- TOPBAR -->
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-10">
@@ -193,7 +193,7 @@
       <!-- SEARCH -->
       <div class="flex items-center gap-4">
 
-        <div class="bg-white px-5 py-4 rounded-2xl shadow-sm flex items-center gap-3 w-full lg:w-[320px]">
+        <div class="bg-white px-5 py-4 rounded-2xl shadow-sm flex items-center gap-3 flex-1 lg:flex-none lg:w-[320px]">
 
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
