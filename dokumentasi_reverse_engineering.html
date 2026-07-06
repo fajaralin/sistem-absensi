@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dokumentasi Reverse Engineering - Sistem Presensi Biometrik</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Mermaid.js for Dynamic UML Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+        
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            securityLevel: 'loose',
+            themeVariables: {
+                // Premium Light Blue Palette
+                background: '#ffffff',
+                primaryColor: '#f1f5f9',
+                primaryTextColor: '#0f172a',
+                primaryBorderColor: '#3b82f6',
+                lineColor: '#2563eb',
+                secondaryColor: '#f8fafc',
+                tertiaryColor: '#f1f5f9',
+                noteBkgColor: '#fef3c7',
+                noteBorderColor: '#d97706',
+                actorBkg: '#f8fafc',
+                actorBorder: '#2563eb',
+                actorTextColor: '#0f172a',
+                signalColor: '#2563eb',
+                signalTextColor: '#0f172a',
+            },
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: false,
+                curve: 'basis'
+            },
+            sequence: {
+                useMaxWidth: false,
+                mirrorActors: false,
+                bottomMargin: 30
+            }
+        });
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+            scroll-behavior: smooth;
+        }
+        
+        /* Glassmorphism Light custom styles */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+        
+        .glass-sidebar {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        /* Border accents */
+        .glow-border:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.08);
+        }
+
+        /* Large and readable diagram container */
+        .mermaid-container {
+            background: #ffffff;
+            border-radius: 1.5rem;
+            padding: 2.5rem 1.5rem;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: auto;
+            min-height: 480px;
+            width: 100%;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.01);
+        }
+
+        .mermaid-container svg {
+            min-width: 600px;
+            max-width: 100%;
+            height: auto !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Print optimization */
+        @media print {
+            body {
+                background-color: #ffffff;
+                color: #000000;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-container {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .glass-card {
+                background: #ffffff !important;
+                color: #000000 !important;
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: none !important;
+                page-break-inside: avoid;
+            }
+            .mermaid-container {
+                background: #ffffff !important;
+                border: 1px solid #cbd5e1 !important;
+                page-break-inside: avoid;
+                box-shadow: none !important;
+            }
+            h1, h2, h3 {
+                color: #0f172a !important;
+                page-break-after: avoid;
+            }
+            p {
+                color: #334155 !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Navbar -->
+    <header class="w-full bg-white/90 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-40 no-print">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+                <i class="fa-solid fa-microchip text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-sm font-black tracking-wide text-slate-800 uppercase leading-none">REVERSE ENGINEERING REPORT</h1>
+                <p class="text-[10px] font-bold text-blue-600 tracking-wider uppercase mt-1">UAS Object-Oriented Analysis & Design (OOAD)</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <button onclick="downloadHTML()" class="btn px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/10 active:scale-95 transition-all">
+                <i class="fa-solid fa-download"></i> Unduh File Laporan HTML
+            </button>
+            <button onclick="window.print()" class="btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-all">
+                <i class="fa-solid fa-file-pdf"></i> Cetak / Simpan PDF
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-grow flex w-full">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-80 shrink-0 hidden lg:block glass-sidebar p-6 space-y-6 sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto no-print">
+            <div class="space-y-1.5">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest px-2">Daftar Dokumen UML</h2>
+                <p class="text-[10px] text-slate-500 font-semibold px-2">KLIK UNTUK NAVIGASI CEPAT</p>
+            </div>
+            
+            <nav class="space-y-1">
+                <a href="#usecase" class="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group">
+                    <span class="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 font-bold group-hover:scale-105 transition-all text-[10px]" style="background-color: rgba(59, 130, 246, 0.1)">1</span>
+                    Use Case Diagram
+                </a>
+                <a href="#activity" class="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group">
+                    <span class="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center text-amber-600 font-bold group-hover:scale-105 transition-all text-[10px]" style="background-color: rgba(245, 158, 11, 0.1)">2</span>
+                    Activity Diagram
+                </a>
+                <a href="#sequence" class="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group">
+                    <span class="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center text-emerald-600 font-bold group-hover:scale-105 transition-all text-[10px]" style="background-color: rgba(16, 185, 129, 0.1)">3</span>
+                    Sequence Diagram
+                </a>
+                <a href="#class" class="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group">
+                    <span class="w-6 h-6 rounded-lg bg-purple-500 flex items-center justify-center text-purple-600 font-bold group-hover:scale-105 transition-all text-[10px]" style="background-color: rgba(139, 92, 246, 0.1)">4</span>
+                    Class Diagram
+                </a>
+                <a href="#package" class="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group">
+                    <span class="w-6 h-6 rounded-lg bg-rose-500 flex items-center justify-center text-rose-600 font-bold group-hover:scale-105 transition-all text-[10px]" style="background-color: rgba(244, 63, 94, 0.1)">5</span>
+                    Package Diagram
+                </a>
+                <a href="#infrastructure" class="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all group">
+                    <span class="w-6 h-6 rounded-lg bg-cyan-500 flex items-center justify-center text-cyan-600 font-bold group-hover:scale-105 transition-all text-[10px]" style="background-color: rgba(6, 182, 212, 0.1)">6</span>
+                    Infrastruktur Diagram
+                </a>
+            </nav>
+
+            <div class="pt-6 border-t border-slate-200 space-y-4">
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">INFORMASI MAHASISWA</span>
+                    <div class="space-y-2 text-xs">
+                        <div>
+                            <span class="block text-[9px] text-slate-400 font-bold uppercase">Nama Lengkap</span>
+                            <span class="font-bold text-slate-700">[Silakan Isi Nama Anda]</span>
+                        </div>
+                        <div>
+                            <span class="block text-[9px] text-slate-400 font-bold uppercase">NIM</span>
+                            <span class="font-bold text-slate-700">[Silakan Isi NIM Anda]</span>
+                        </div>
+                        <div>
+                            <span class="block text-[9px] text-slate-400 font-bold uppercase">Mata Kuliah</span>
+                            <span class="font-semibold text-slate-700">Object-Oriented Analysis & Design</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow p-4 md:p-8 lg:p-12 max-w-5xl mx-auto space-y-12 md:space-y-16 print-container w-full overflow-x-hidden">
+            
+            <!-- Hero Cover Header -->
+            <section class="glass-card p-6 md:p-10 rounded-[2rem] space-y-6 border border-slate-200 text-center relative overflow-hidden shadow-sm">
+                <div class="absolute -right-16 -top-16 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -left-16 -bottom-16 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <span class="px-4 py-1.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-200 uppercase tracking-widest inline-block">LAPORAN REKAYASA BALIK</span>
+                <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900 uppercase leading-tight max-w-3xl mx-auto">
+                    Reverse Engineering & Pemodelan UML<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">Sistem Presensi Biometrik Kiosk</span>
+                </h1>
+                <p class="text-xs md:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
+                    Dokumentasi teknis menyeluruh hasil rekayasa balik (reverse engineering) dari aplikasi presensi berbasis deteksi wajah pintar (OpenCV) dan validasi lokasi koordinat GPS (Haversine).
+                </p>
+                <div class="h-[1px] w-32 bg-slate-200 mx-auto"></div>
+                <div class="flex flex-wrap justify-center gap-6 text-[10px] font-bold text-slate-500 tracking-wider uppercase">
+                    <div><i class="fa-solid fa-code text-blue-500 mr-1.5"></i> Vibe Coding</div>
+                    <div><i class="fa-solid fa-network-wired text-indigo-500 mr-1.5"></i> PHP/Laravel & Python</div>
+                    <div><i class="fa-solid fa-shield-halved text-emerald-500 mr-1.5"></i> OOAD Design</div>
+                </div>
+            </section>
+
+            <!-- SECTION 1: Use Case Diagram -->
+            <section id="usecase" class="glass-card p-6 md:p-8 rounded-[2rem] space-y-6 shadow-sm glow-border border border-slate-200 transition-all duration-300">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600" style="background-color: rgba(59, 130, 246, 0.1)"><i class="fa-solid fa-users"></i></div>
+                        <h2 class="text-lg font-bold text-slate-900 uppercase tracking-tight">1. Use Case Diagram</h2>
+                    </div>
+                    <span class="text-[9px] font-mono font-bold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-md uppercase border border-slate-200">Functional Requirement</span>
+                </div>
+
+                <!-- Live Mermaid Render -->
+                <div class="flex flex-col gap-3">
+                    <div class="mermaid-container" id="usecase_container">
+                        <pre class="mermaid">
+graph TD
+    subgraph Kios Presensi & Administrasi
+        UC1([Melakukan Presensi Wajah])
+        UC2([Mengajukan Sakit/Izin])
+        UC3([Mengunggah Surat Bukti])
+        UC4([Melihat Dashboard & Log Kehadiran])
+        UC5([Mengubah Pengaturan GPS & Lokasi])
+        UC6([Mengelola Data Siswa & Wajah])
+    end
+
+    Siswa((Siswa)) --> UC1
+    Siswa --> UC2
+    UC2 -.->|include| UC3
+
+    Admin((Admin)) --> UC4
+    Admin --> UC5
+    Admin --> UC6
+
+    AI_Engine((Python AI Engine)) -.->|proses biometrik| UC1
+    AI_Engine -.->|proses biometrik| UC2
+    
+    style UC1 fill:#f8fafc,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    style UC2 fill:#f8fafc,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    style UC3 fill:#f8fafc,stroke:#64748b,stroke-width:2px,stroke-dasharray: 5 5,color:#334155
+    style UC4 fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
+    style UC5 fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
+    style UC6 fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
+    style Siswa fill:#ffffff,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    style Admin fill:#ffffff,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
+    style AI_Engine fill:#ffffff,stroke:#10b981,stroke-width:2px,color:#0f172a
+                        </pre>
+                    </div>
+                    <!-- Download Button Below Diagram -->
+                    <div class="flex justify-end no-print">
+                        <button onclick="downloadDiagram('usecase_container', 'use_case_diagram.png')" class="btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-all">
+                            <i class="fa-solid fa-file-image text-blue-600"></i> Unduh Gambar Diagram (PNG)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4 text-xs md:text-sm text-slate-600 leading-relaxed font-normal">
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2"><i class="fa-solid fa-circle-info text-blue-500 mr-1.5"></i> Deskripsi & Analisis Sistem</h3>
+                    
+                    <p>
+                        <strong>Definisi & Aliran Bisnis:</strong> Use Case Diagram menggambarkan interaksi batas sistem (system boundary) antara aktor (entitas eksternal) dengan fungsionalitas presensi biometrik pada lobi sekolah. Terdapat tiga aktor utama yang diidentifikasi dalam sistem: Siswa sebagai pelaku utama kegiatan belajar mengajar yang mengisi presensi, Administrator sebagai pengelola data master dan sistem, serta Python AI Engine sebagai aktor sistem terkomputerisasi eksternal yang diintegrasikan untuk menangani pengenalan wajah secara real-time. Use case utama bagi Siswa mencakup "Melakukan Presensi Wajah" dan "Mengajukan Sakit/Izin" secara mandiri di kiosk. Pengajuan sakit/izin memiliki hubungan <em>include</em> dengan "Mengunggah Surat Bukti", yang menegaskan bahwa secara prosedural sistem mewajibkan pengunggahan lampiran berkas pendukung medis atau surat persetujuan orang tua sebagai bukti sah ketidakhadiran siswa.
+                    </p>
+                    
+                    <p>
+                        <strong>Implementasi Kode Program:</strong> Dari hasil rekayasa balik struktur kode aplikasi, use case "Melakukan Presensi Wajah" dipetakan langsung pada halaman depan kiosk yang dikendalikan oleh berkas template <a href="file:///d:/Semester%206/OOAD/resources/views/absensi.blade.php" class="text-blue-500 hover:underline">absensi.blade.php</a> dan diproses pada controller <a href="file:///d:/Semester%206/OOAD/app/Http/Controllers/PublicAbsensiController.php" class="text-blue-500 hover:underline">PublicAbsensiController.php</a> melalui method <code>scanAuto()</code>. Use case "Mengajukan Sakit/Izin" diproses melalui form input di sisi client dan ditransmisikan ke server menggunakan method <code>submitIzin()</code> pada controller yang sama, yang kemudian mendelegasikan logika penyimpanannya ke dalam database melalui class service <a href="file:///d:/Semester%206/OOAD/app/Services/AttendanceService.php" class="text-blue-500 hover:underline">AttendanceService.php</a> di method <code>submitStudentLeave()</code>. Di sisi admin, pengelolaan data master, penyesuaian parameter radius koordinat GPS, dan verifikasi log kehadiran dipetakan pada folder admin controller, khususnya pada berkas <code>SettingController.php</code>.
+                    </p>
+                    
+                    <p>
+                        <strong>Rekayasa Balik & Pola Desain:</strong> Melalui analisis rekayasa balik, use case ini menunjukkan pemisahan hak akses (Role-Based Access Control) yang sangat ketat untuk mengamankan data kehadiran sekolah. Dengan membatasi akses siswa hanya pada fungsi presensi wajah lobi dan pengisian izin, sistem meminimalisir celah eksploitasi data kehadiran. Relasi dependensi <em>include</em> pada use case unggah dokumen membuktikan bahwa sistem menerapkan validasi berlapis di mana model database <code>Attendance</code> dirancang untuk menerima field <code>face_image_path</code> opsional yang dialokasikan khusus untuk menyimpan path file dokumen surat izin dalam folder lokal <code>storage/app/public/leave_attachments</code>.
+                    </p>
+                </div>
+            </section>
+
+            <!-- SECTION 2: Activity Diagram -->
+            <section id="activity" class="glass-card p-6 md:p-8 rounded-[2rem] space-y-6 shadow-sm glow-border border border-slate-200 transition-all duration-300 page-break">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600" style="background-color: rgba(245, 158, 11, 0.1)"><i class="fa-solid fa-route"></i></div>
+                        <h2 class="text-lg font-bold text-slate-900 uppercase tracking-tight">2. Activity Diagram</h2>
+                    </div>
+                    <span class="text-[9px] font-mono font-bold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-md uppercase border border-slate-200">Behavioral Workflow</span>
+                </div>
+
+                <!-- Live Mermaid Render -->
+                <div class="flex flex-col gap-3">
+                    <div class="mermaid-container" id="activity_container">
+                        <pre class="mermaid">
+stateDiagram-v2
+    [*] --> KioskHalamanUtama : Buka Web Kiosk
+    KioskHalamanUtama --> CekLokasiGPS : Kamera Aktif
+    
+    state CekLokasiGPS {
+        [*] --> CekStatusGPS
+        CekStatusGPS --> DiLuarRadius : Lokasi Diluar Jangkauan / GPS Error
+        CekStatusGPS --> DiDalamRadius : Lokasi Didalam Jangkauan / GPS Nonaktif
+    }
+    
+    state DiDalamRadius {
+        [*] --> HitungMundur3s
+        HitungMundur3s --> JalankanAutoScan : Waktu Habis (Mode Presensi)
+        JalankanAutoScan --> KirimFotoKeServer : Deteksi Wajah
+        KirimFotoKeServer --> ProsesPencocokanWajah : Panggil AI Engine
+        ProsesPencocokanWajah --> HasilCocok : Sukses Teridentifikasi
+        ProsesPencocokanWajah --> HasilGagal : Gagal / Tidak Cocok
+        
+        HasilCocok --> SimpanKehadiranDB : Catat Kehadiran (Hadir/Telat)
+        SimpanKehadiranDB --> TampilkanLayarSukses : Tampilkan Nama & Feedback TTS
+        HasilGagal --> TampilkanLayarGagal : Tampilkan Instruksi & Reset
+    }
+    
+    state DiLuarRadius {
+        [*] --> PresensiNonaktif : Auto-Scan Presensi Dikunci
+        PresensiNonaktif --> KlikTombolIzin : Klik "Ajukan Sakit/Izin"
+    }
+
+    HitungMundur3s --> KlikTombolIzin : Klik Sebelum 3s
+    
+    KlikTombolIzin --> JalankanScanIzin : Kamera Scan Wajah (Mode Izin)
+    JalankanScanIzin --> VerifikasiIdentitas : Panggil AI Engine (1-to-Many)
+    VerifikasiIdentitas --> IdentitasSukses : Wajah Dikenali
+    VerifikasiIdentitas --> IdentitasGagal : Wajah Tidak Terdaftar
+    
+    IdentitasSukses --> TampilkanFormulirIzin : Step 2 (Form Pengisian)
+    TampilkanFormulirIzin --> IsiFormulir : Pilih Sakit/Izin, Isi Alasan, Unggah Surat
+    IsiFormulir --> KirimPengajuan : Klik "Kirim Pengajuan"
+    KirimPengajuan --> SimpanIzinDB : Catat Status Sakit/Izin di DB
+    SimpanIzinDB --> TampilkanLayarSukses : Tampilkan Feedback TTS Sukses
+    
+    TampilkanLayarSukses --> [*] : Auto-Reset ke Awal (5s)
+    TampilkanLayarGagal --> [*] : Auto-Reset ke Awal (5s)
+    IdentitasGagal --> TampilkanLayarGagal
+                        </pre>
+                    </div>
+                    <!-- Download Button Below Diagram -->
+                    <div class="flex justify-end no-print">
+                        <button onclick="downloadDiagram('activity_container', 'activity_diagram.png')" class="btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-all">
+                            <i class="fa-solid fa-file-image text-amber-600"></i> Unduh Gambar Diagram (PNG)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4 text-xs md:text-sm text-slate-600 leading-relaxed font-normal">
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2"><i class="fa-solid fa-circle-info text-amber-500 mr-1.5"></i> Deskripsi & Analisis Sistem</h3>
+                    
+                    <p>
+                        <strong>Definisi & Aliran Bisnis:</strong> Activity Diagram ini memetakan alur perilaku dinamis dari interaksi siswa di depan mesin kiosk presensi lobi sekolah. Alur utama berfokus pada validasi lokasi di sisi client dan inisialisasi hitung mundur 3 detik sebelum pemindaian biometrik otomatis untuk presensi dilakukan. Desain alur aktivitas ini membagi skenario siswa: jika siswa terdeteksi di dalam radius sekolah, hitung mundur berjalan untuk melakukan presensi. Sebaliknya, jika siswa di luar radius (seperti saat membuka web dari rumah), auto-scan presensi dikunci (nonaktif), namun sistem tetap membuka akses mandiri agar siswa dapat mengklik tombol "Ajukan Sakit/Izin". Siswa kemudian memindai wajahnya untuk identifikasi profil, mengisi data alasan ketidakhadiran, mengunggah surat, dan menyimpannya.
+                    </p>
+                    
+                    <p>
+                        <strong>Implementasi Kode Program:</strong> Secara implementasi, alur validasi lokasi sisi client ditangani menggunakan HTML5 Geolocation API di dalam method <code>fetchLocation()</code> pada file blade kiosk. Jarak dihitung menggunakan formula Haversine di method <code>calculateDistanceClient()</code>. Pengaturan hitung mundur 3 detik dikelola di Alpine.js oleh method <code>startAutoScan()</code>, yang akan menahan pemindaian otomatis selama 3 detik melalui <code>setInterval</code>. Jika tombol pengajuan izin diklik, sistem memicu method <code>switchToLeaveMode()</code> yang menonaktifkan mode presensi secara instan, menghentikan loop deteksi kehadiran, dan mengaktifkan kamera kembali untuk memverifikasi wajah pemohon izin tanpa mencatat check-in.
+                    </p>
+                    
+                    <p>
+                        <strong>Rekayasa Balik & Pola Desain:</strong> Rekayasa balik aliran ini mengidentifikasi pola penanganan kesalahan dan asinkronus (Asynchronous State Management). Sistem menggunakan variabel reaktif Alpine.js seperti <code>step</code>, <code>isLeaveMode</code>, <code>analyzing</code>, dan <code>isScanning</code> untuk mengontrol visibilitas elemen UI. Fitur countdown 3 detik dan validasi <code>scanMode</code> di method <code>silentScan()</code> berfungsi sebagai tameng pelindung (*guard*) untuk memecahkan bug <em>race condition</em>. Tanpa delay dan proteksi mode ini, server akan memproses data scan kehadiran siswa secara otomatis (karena request dikirim di background sebelum UI sempat berganti), yang mengakibatkan siswa yang ingin izin malah tidak sengaja tercatat hadir terlambat.
+                    </p>
+                </div>
+            </section>
+
+            <!-- SECTION 3: Sequence Diagram -->
+            <section id="sequence" class="glass-card p-6 md:p-8 rounded-[2rem] space-y-6 shadow-xl glow-border border border-slate-200 transition-all duration-300 page-break">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600" style="background-color: rgba(16, 185, 129, 0.1)"><i class="fa-solid fa-timeline"></i></div>
+                        <h2 class="text-lg font-bold text-slate-900 uppercase tracking-tight">3. Sequence Diagram</h2>
+                    </div>
+                    <span class="text-[9px] font-mono font-bold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-md uppercase border border-slate-200">Object Interaction</span>
+                </div>
+
+                <!-- Live Mermaid Render -->
+                <div class="flex flex-col gap-3">
+                    <div class="mermaid-container" id="sequence_container">
+                        <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Siswa
+    participant Client as Kiosk Browser (Alpine.js)
+    participant Laravel as Laravel Server (PublicAbsensiController)
+    participant Service as AttendanceService
+    participant Python as Python AI Engine (Flask Port 5001)
+    participant DB as MySQL Database
+
+    Siswa->>Client: "Berdiri di depan kamera"
+    Client->>Client: "Hitung mundur 3s selesai (Mode Presensi)"
+    Client->>Client: "Capture wajah ke Base64 Image"
+    Client->>Laravel: "POST /absensi/scan-auto (image, lat, lng, purpose='attendance')"
+    
+    Laravel->>Service: "scanFacePresenceAuto(image, lat, lng)"
+    Service->>Service: "checkAttendanceGateOpen() & checkLocation()"
+    
+    alt Jika di luar jangkauan GPS / gerbang belum dibuka
+        Service-->>Laravel: "Return error (status=false)"
+        Laravel-->>Client: "Response JSON error"
+        Client-->>Siswa: "Tampilkan layar gagal (di luar radius)"
+    else Jika validasi lokasi sukses
+        Service->>Python: "POST /identify (image)"
+        Note over Python: Proses Face Recognition - LBPH Algorithm
+        Python-->>Service: "Return JSON (success=true, name='NISN_SISWA', confidence=92%)"
+        
+        Service->>DB: "findByNisn('NISN_SISWA')"
+        DB-->>Service: "Return Student & User Profile"
+        
+        Service->>DB: "findByStudentAndDate(student_id, today)"
+        DB-->>Service: "Return null (belum absen)"
+        
+        Service->>Service: "resolveAttendanceStatus(check_in_time) -> Hadir / Telat"
+        Service->>DB: "create (attendance record)"
+        DB-->>Service: "Success"
+        
+        Service-->>Laravel: "Return success data (status, name, confidence)"
+        Laravel-->>Client: "Response JSON success"
+        Client->>Client: "Play Text-To-Speech (TTS)"
+        Client-->>Siswa: "Tampilkan Layar Sukses (Step 3) & Reset halaman"
+    end
+                        </pre>
+                    </div>
+                    <!-- Download Button Below Diagram -->
+                    <div class="flex justify-end no-print">
+                        <button onclick="downloadDiagram('sequence_container', 'sequence_diagram.png')" class="btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-all">
+                            <i class="fa-solid fa-file-image text-emerald-600"></i> Unduh Gambar Diagram (PNG)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4 text-xs md:text-sm text-slate-300 leading-relaxed font-normal">
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2"><i class="fa-solid fa-circle-info text-emerald-500 mr-1.5"></i> Deskripsi & Analisis Sistem</h3>
+                    
+                    <p>
+                        <strong>Definisi & Aliran Bisnis:</strong> Sequence Diagram memodelkan interaksi pertukaran pesan (message passing) yang teratur antar elemen sistem berdasarkan urutan kronologis waktu. Kejadian dipicu ketika siswa berdiri di depan kamera kiosk. Setelah hitung mundur 3 detik selesai di sisi client, kamera menangkap frame gambar, mengubahnya menjadi format Base64, dan mengirimkannya ke endpoint controller Laravel. Request tersebut disertai parameter koordinat latitude, longitude, dan tujuan pengiriman (*purpose*). Backend Laravel memvalidasi aturan waktu gerbang dan koordinat GPS. Jika semua validasi lolos, Laravel mendelegasikan pemrosesan pencocokan wajah biometrik ke server Flask Python pada port 5001. Python mendeteksi kecocokan wajah, dan jika terverifikasi, database MySQL akan merekam kehadiran siswa tersebut.
+                    </p>
+                    
+                    <p>
+                        <strong>Implementasi Kode Program:</strong> Urutan pesan di atas diwujudkan dalam pemanggilan fungsi lintas teknologi. Dari sisi client, pengiriman data base64 diproses menggunakan fungsi <code>fetch('/absensi/scan-auto')</code>. Request ini ditangkap oleh route post Laravel yang mengarah ke method <code>scanAuto()</code> di <code>PublicAbsensiController</code>. Logika validasi dan orkestrasi diatur sepenuhnya di dalam <code>AttendanceService</code> di method <code>scanFacePresenceAuto()</code>. Komunikasi keluar menuju server Python didelegasikan pada service class <code>FaceRecognitionService</code> yang memicu curl request HTTP POST ke endpoint Python API <code>/identify</code>. Hasil olahan data disimpan ke database melalui repository class yang mengimplementasikan query Eloquent ORM.
+                    </p>
+                    
+                    <p>
+                        <strong>Rekayasa Balik & Pola Desain:</strong> Dari kacamata rekayasa balik, diagram ini memperlihatkan pola integrasi arsitektur terdistribusi (*Decoupled Integration*). Laravel bertindak sebagai gerbang terpusat yang melindungi Python AI Engine dari akses langsung client. Semua request wajib melalui otentikasi token CSRF Laravel dan validasi Geolocation terlebih dahulu sebelum dikirim ke port 5001. Jika validasi lokasi gagal (misalnya jarak melebihi radius sekolah), backend Laravel akan langsung mengembalikan respon error 422 tanpa memicu API Python. Keputusan desain ini sangat penting untuk menghemat resource komputasi CPU server dari ancaman overload akibat proses identifikasi biometrik beruntun yang tidak valid.
+                    </p>
+                </div>
+            </section>
+
+            <!-- SECTION 4: Class Diagram -->
+            <section id="class" class="glass-card p-6 md:p-8 rounded-[2rem] space-y-6 shadow-sm glow-border border border-slate-200 transition-all duration-300 page-break">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600" style="background-color: rgba(139, 92, 246, 0.1)"><i class="fa-solid fa-rectangle-list"></i></div>
+                        <h2 class="text-lg font-bold text-slate-900 uppercase tracking-tight">4. Class Diagram</h2>
+                    </div>
+                    <span class="text-[9px] font-mono font-bold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-md uppercase border border-slate-200">Structural Architecture</span>
+                </div>
+
+                <!-- Live Mermaid Render -->
+                <div class="flex flex-col gap-3">
+                    <div class="mermaid-container" id="class_container">
+                        <pre class="mermaid">
+classDiagram
+    class PublicAbsensiController {
+        -StudentRepositoryInterface studentRepo
+        -AttendanceService attendanceService
+        -SettingService settingService
+        -FaceRecognitionServiceInterface faceService
+        +index() View
+        +searchSiswa(Request) JsonResponse
+        +scan(Request) JsonResponse
+        +scanAuto(Request) JsonResponse
+        +submitIzin(Request) JsonResponse
+    }
+
+    class AttendanceService {
+        -AttendanceRepositoryInterface attendanceRepo
+        -StudentRepositoryInterface studentRepo
+        -LogRepositoryInterface logRepo
+        -FaceRecognitionServiceInterface faceRecognitionService
+        -SettingService settingService
+        +scanFacePresenceByNisn(nisn, image, lat, lng) Array
+        +scanFacePresenceAuto(image, lat, lng) Array
+        +identifyStudentForLeave(image) Array
+        +submitStudentLeave(studentId, status, notes, attachmentFile) Array
+        #checkLocation(lat, lng) Array
+        #calculateDistance(lat1, lon1, lat2, lon2) Float
+    }
+
+    class FaceRecognitionService {
+        -string pythonPath
+        -string serverUrl
+        +initializeServer() void
+        +recognize(imageBase64, expectedNisn) Array
+        +identify(imageBase64) Array
+        -ensureServerIsRunning() bool
+    }
+
+    class StudentRepository {
+        +findByNisn(nisn) Student
+        +searchByName(query, limit) Collection
+    }
+
+    class AttendanceRepository {
+        +findByStudentAndDate(studentId, date) Attendance
+        +create(data) Attendance
+        +update(id, data) bool
+    }
+
+    PublicAbsensiController --> AttendanceService : uses
+    PublicAbsensiController --> SettingService : uses
+    PublicAbsensiController --> FaceRecognitionServiceInterface : uses
+    AttendanceService --> FaceRecognitionServiceInterface : uses
+    AttendanceService --> AttendanceRepositoryInterface : uses
+    AttendanceService --> StudentRepositoryInterface : uses
+    FaceRecognitionService ..|> FaceRecognitionServiceInterface : implements
+    StudentRepository ..|> StudentRepositoryInterface : implements
+    AttendanceRepository ..|> AttendanceRepositoryInterface : implements
+    
+    style PublicAbsensiController fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
+    style AttendanceService fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
+    style FaceRecognitionService fill:#f8fafc,stroke:#10b981,stroke-width:2px,color:#0f172a
+    style StudentRepository fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#334155
+    style AttendanceRepository fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#334155
+                        </pre>
+                    </div>
+                    <!-- Download Button Below Diagram -->
+                    <div class="flex justify-end no-print">
+                        <button onclick="downloadDiagram('class_container', 'class_diagram.png')" class="btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-all">
+                            <i class="fa-solid fa-file-image text-purple-600"></i> Unduh Gambar Diagram (PNG)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4 text-xs md:text-sm text-slate-300 leading-relaxed font-normal">
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2"><i class="fa-solid fa-circle-info text-purple-400 mr-1.5"></i> Deskripsi & Analisis Sistem</h3>
+                    
+                    <p>
+                        <strong>Definisi & Aliran Bisnis:</strong> Class Diagram menggambarkan struktur statis dan hubungan asosiasi logis antar komponen berorientasi objek dalam kode sistem presensi. Arsitektur aplikasi dirancang mengikuti pola pemisahan lapisan (Separation of Layers) yang bersih untuk menyederhanakan siklus pemeliharaan aplikasi. Pengontrol web (`PublicAbsensiController`) tidak memproses logika bisnis kehadiran secara langsung, melainkan bergantung pada kelas service (`AttendanceService` dan `SettingService`). Logika bisnis ini kemudian berinteraksi dengan database melalui abstraksi penyimpanan data (interface Repository) untuk memisahkan logika kueri data dari sistem manajemen database fisik (DBMS).
+                    </p>
+                    
+                    <p>
+                        <strong>Implementasi Kode Program:</strong> Dependensi antar kelas ini diwujudkan dengan memanfaatkan fitur **Dependency Injection** pada Laravel Service Container. Dalam berkas `PublicAbsensiController.php`, Anda dapat mengamati bahwa kelas repositori seperti <code>StudentRepositoryInterface</code> dan kelas service diinjeksikan secara otomatis melalui parameter constructor. Kelas `FaceRecognitionService` mengimplementasikan interface `FaceRecognitionServiceInterface`, bertindak sebagai adapter untuk memanggil subproses API Python Flask. Repository kelas seperti `StudentRepository` dan `AttendanceRepository` mempergunakan Eloquent database model (seperti model `Student`, `User`, `Attendance`, `Setting`) untuk mengoperasikan data ke tabel MySQL secara aman.
+                    </p>
+                    
+                    <p>
+                        <strong>Rekayasa Balik & Pola Desain:</strong> Rekayasa balik ini menunjukkan kepatuhan sistem yang luar biasa terhadap prinsip **SOLID**, khususnya *Single Responsibility Principle* (SRP) dan *Dependency Inversion Principle* (DIP). Dengan merancang dependensi menggunakan interface (seperti `StudentRepositoryInterface` dan `FaceRecognitionServiceInterface`), komponen tingkat tinggi tidak terikat langsung dengan detail teknis tingkat rendah. Sebagai contoh, jika tim pengembang berniat mengganti mesin AI lokal dengan sistem pengenalan wajah cloud (seperti AWS Rekognition), mereka hanya perlu menulis kelas baru yang mengimplementasikan `FaceRecognitionServiceInterface` tanpa harus merombak satu baris pun kode di dalam `AttendanceService` atau controller.
+                    </p>
+                </div>
+            </section>
+
+            <!-- SECTION 5: Package Diagram -->
+            <section id="package" class="glass-card p-6 md:p-8 rounded-[2rem] space-y-6 shadow-sm glow-border border border-slate-200 transition-all duration-300 page-break">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600" style="background-color: rgba(244, 63, 94, 0.1)"><i class="fa-solid fa-box-archive"></i></div>
+                        <h2 class="text-lg font-bold text-slate-900 uppercase tracking-tight">5. Package Diagram</h2>
+                    </div>
+                    <span class="text-[9px] font-mono font-bold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-md uppercase border border-slate-200">Architectural Packaging</span>
+                </div>
+
+                <!-- Live Mermaid Render -->
+                <div class="flex flex-col gap-3">
+                    <div class="mermaid-container" id="package_container">
+                        <pre class="mermaid">
+classDiagram
+    class PresentationLayer {
+        - PublicAbsensiController
+        - AdminAttendanceController
+        - AdminSettingController
+        - Views (absensi.blade, admin.settings, admin.attendance)
+    }
+    class BusinessServiceLayer {
+        - AttendanceService
+        - SettingService
+        - FaceRecognitionServiceInterface
+    }
+    class InfrastructureServiceLayer {
+        - FaceRecognitionService (Python Subprocess Runner)
+        - LogService
+    }
+    class RepositoryLayer {
+        - StudentRepository
+        - AttendanceRepository
+        - LogRepository
+    }
+    class DomainModelLayer {
+        - User Model
+        - Student Model
+        - Attendance Model
+        - Setting Model
+        - FaceData Model
+    }
+    class ExternalPythonAIEngine {
+        - python_server.py (Flask API)
+        - OpenCV & Face Recognition Libraries
+        - LBPH Face Matcher Dataset
+    }
+
+    PresentationLayer --> BusinessServiceLayer : depends on
+    BusinessServiceLayer --> InfrastructureServiceLayer : uses
+    BusinessServiceLayer --> RepositoryLayer : uses
+    RepositoryLayer --> DomainModelLayer : interacts with
+    InfrastructureServiceLayer --> ExternalPythonAIEngine : HTTP calls
+    
+    style PresentationLayer fill:#f8fafc,stroke:#f43f5e,stroke-width:2px,color:#0f172a
+    style BusinessServiceLayer fill:#f8fafc,stroke:#f43f5e,stroke-width:2px,color:#0f172a
+    style InfrastructureServiceLayer fill:#f8fafc,stroke:#10b981,stroke-width:2px,color:#0f172a
+    style RepositoryLayer fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#334155
+    style DomainModelLayer fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#334155
+    style ExternalPythonAIEngine fill:#ffffff,stroke:#3b82f6,stroke-width:2px,color:#0f172a
+                        </pre>
+                    </div>
+                    <!-- Download Button Below Diagram -->
+                    <div class="flex justify-end no-print">
+                        <button onclick="downloadDiagram('package_container', 'package_diagram.png')" class="btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-all">
+                            <i class="fa-solid fa-file-image text-rose-600"></i> Unduh Gambar Diagram (PNG)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4 text-xs md:text-sm text-slate-300 leading-relaxed font-normal">
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2"><i class="fa-solid fa-circle-info text-rose-400 mr-1.5"></i> Deskripsi & Analisis Sistem</h3>
+                    
+                    <p>
+                        <strong>Definisi & Aliran Bisnis:</strong> Package Diagram mengilustrasikan pengelompokan logis dari berkas-berkas program ke dalam subsistem atau paket terpisah. Pembagian paket ini bertujuan untuk membatasi ketergantungan antar-modul (*decoupling*) sehingga struktur aplikasi menjadi lebih modular dan teratur. Paket dibagi menjadi beberapa lapisan vertikal: Presentation Layer yang menangani tampilan visual dan request client, Business Service Layer sebagai pusat aturan bisnis aplikasi, Infrastructure Layer yang melayani integrasi eksternal, Repository Layer untuk enkapsulasi interaksi basis data, Domain Model Layer yang merepresentasikan skema tabel data, serta External Python AI Engine sebagai modul pemroses algoritma kecerdasan buatan.
+                    </p>
+                    
+                    <p>
+                        <strong>Implementasi Kode Program:</strong> Pada struktur berkas Laravel, pengemasan ini terpetakan secara konsisten. Paket `PresentationLayer` diwakili oleh berkas controller di folder `app/Http/Controllers` dan file HTML/Blade di `resources/views`. Paket `BusinessService` dan `InfrastructureService` terstruktur di dalam direktori `app/Services` yang terbagi atas file interface dan berkas implementasi konkret. `RepositoryLayer` terstruktur di dalam direktori `app/Repositories/Contracts` and `app/Repositories/Eloquent` untuk implementasi kelas. Paket `ExternalPythonAIEngine` terisolasi sebagai folder eksternal di tingkat root project, menampung file `python_server.py` dan aset berkas XML/JSON dataset wajah siswa.
+                    </p>
+                    
+                    <p>
+                        <strong>Rekayasa Balik & Pola Desain:</strong> Rekayasa balik pada pembagian kemasan ini membuktikan penerapan aturan dependensi satu arah (One-Way Dependency Rule). Lapisan atas diperbolehkan mengakses lapisan yang berada di bawahnya, namun lapisan bawah dilarang keras untuk mengimpor atau memanggil fungsionalitas dari lapisan di atasnya. Komunikasi keluar menuju `ExternalPythonAIEngine` dijembatani secara eksklusif oleh adapter di `InfrastructureServiceLayer`, sehingga web server Laravel dapat memperlakukan sistem AI Python sebagai *black box*. Desain ini mempermudah perawatan kode, di mana perubahan internal pada dataset AI Python tidak akan mempengaruhi kestabilan kode PHP di Presentation Layer.
+                    </p>
+                </div>
+            </section>
+
+            <!-- SECTION 6: Infrastruktur Diagram -->
+            <section id="infrastructure" class="glass-card p-6 md:p-8 rounded-[2rem] space-y-6 shadow-sm glow-border border border-slate-200 transition-all duration-300 page-break">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-cyan-50 flex items-center justify-center text-cyan-600" style="background-color: rgba(6, 182, 212, 0.1)"><i class="fa-solid fa-server"></i></div>
+                        <h2 class="text-lg font-bold text-slate-900 uppercase tracking-tight">6. Infrastruktur Diagram</h2>
+                    </div>
+                    <span class="text-[9px] font-mono font-bold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-md uppercase border border-slate-200">Hardware Deployment</span>
+                </div>
+
+                <!-- Live Mermaid Render -->
+                <div class="flex flex-col gap-3">
+                    <div class="mermaid-container" id="infrastructure_container">
+                        <pre class="mermaid">
+graph TB
+    subgraph Client Node [Client-Side Kiosk]
+        Browser[Web Browser - Chrome/Edge]
+        Webcam[Webcam Hardware]
+        GPS[GPS/Geolocation API]
+        Browser --- Webcam
+        Browser --- GPS
+    end
+
+    subgraph Laravel Server Node [Laravel Web Server]
+        PHP[PHP-FPM Server]
+        LaravelApp[Laravel MVC Framework]
+        PHP --- LaravelApp
+    end
+
+    subgraph Python AI Node [Python Face Recognition Server]
+        Flask[Flask Server - Port 5001]
+        LBPH[OpenCV LBPH Face Recognizer]
+        Dataset[(Face Database JSON)]
+        Flask --- LBPH
+        LBPH --- Dataset
+    end
+
+    subgraph Database Node [Database Server]
+        MySQL[(MySQL DBMS)]
+    end
+
+    Browser ==>|HTTP / HTTPS - Port 80/443| PHP
+    LaravelApp ==>|HTTP Post /identify - Port 5001| Flask
+    LaravelApp ==>|SQL Query - Port 3306| MySQL
+    LaravelApp -.->|Spawn CLI Subprocess| Flask
+    
+    style Browser fill:#f8fafc,stroke:#06b6d4,stroke-width:2px,color:#0f172a
+    style LaravelApp fill:#f8fafc,stroke:#3b82f6,stroke-width:2px,color:#0f172a
+    style Flask fill:#f8fafc,stroke:#10b981,stroke-width:2px,color:#0f172a
+    style MySQL fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#334155
+                        </pre>
+                    </div>
+                    <!-- Download Button Below Diagram -->
+                    <div class="flex justify-end no-print">
+                        <button onclick="downloadDiagram('infrastructure_container', 'infrastructure_diagram.png')" class="btn px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-2 active:scale-95 transition-all">
+                            <i class="fa-solid fa-file-image text-cyan-600"></i> Unduh Gambar Diagram (PNG)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4 text-xs md:text-sm text-slate-300 leading-relaxed font-normal">
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2"><i class="fa-solid fa-circle-info text-cyan-400 mr-1.5"></i> Deskripsi & Analisis Sistem</h3>
+                    
+                    <p>
+                        <strong>Definisi & Aliran Bisnis:</strong> Infrastruktur Diagram (Deployment Diagram) memetakan arsitektur fisik dari server komputasi, perangkat periferal, dan saluran komunikasi yang mendistribusikan sistem presensi biometrik. Topologi ini terdiri atas empat node utama: Client Node yang dioperasikan pada komputer tablet/PC kiosk lobi yang terhubung dengan webcam fisik dan sensor GPS browser, Laravel Web Server Node yang menjalankan engine PHP-FPM untuk pemrosesan MVC dan logika data, Database Node yang mengelola data relasional melalui DBMS MySQL, serta Python AI Node sebagai server pengenal biometrik terdedikasi yang mendengarkan request pada port 5001 lokal menggunakan protokol TCP/IP.
+                    </p>
+                    
+                    <p>
+                        <strong>Implementasi Kode Program:</strong> Dalam koding aplikasi Laravel, hubungan komunikasi antar node ini dikonfigurasi melalui berkas variabel lingkungan `.env`. Parameter `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, dan `DB_PASSWORD` mengatur konektivitas langsung ke Database Node. Alamat Python AI Node didefinisikan secara asinkron di file `config/services.php` atau file `.env` menuju port `5001`. Proses otentikasi biometrik dilakukan dengan mengirimkan request HTTP klien dari Laravel Web Server Node ke Python AI Node menggunakan pustaka PHP cURL atau HTTP Client Laravel. Laravel juga memiliki kendali memicu CLI Windows menggunakan instruksi <code>proc_open</code> untuk meluncurkan `python_server.py` secara otomatis jika port 5001 terdeteksi belum aktif.
+                    </p>
+                    
+                    <p>
+                        <strong>Rekayasa Balik & Pola Desain:</strong> Melalui rekayasa balik infrastruktur terdistribusi ini, keputusan desain pemisahan server web Laravel dan server AI Python terbukti sangat vital untuk menjaga stabilitas kiosk. Pustaka komputasi AI biometrik wajah (seperti OpenCV, Face Recognition) membutuhkan resource komputasi memori RAM dan siklus clock CPU yang tinggi selama memproses algoritma pencocokan matriks citra wajah LBPH. Dengan memisahkan beban pemrosesan ini ke server port 5001 (Python Node), Laravel Server Node dapat fokus secara optimal menangani ribuan transaksi request presensi dari client dengan cepat, tanpa harus terhambat oleh beban proses komputasi citra wajah yang intensif.
+                    </p>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full bg-white border-t border-slate-200 py-6 text-center text-[10px] font-bold text-slate-400 tracking-wider uppercase shrink-0 no-print">
+        &copy; 2026 &bull; LAPORAN TUGAS REVERSE ENGINEERING &bull; MATAKULIAH OBJECT-ORIENTED ANALYSIS & DESIGN
+    </footer>
+
+    <!-- JavaScript code for standalone download -->
+    <script>
+        function downloadHTML() {
+            const htmlContent = document.documentElement.outerHTML;
+            const completeHTML = `<!DOCTYPE html>\n${htmlContent}`;
+            
+            const blob = new Blob([completeHTML], { type: 'text/html;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", "Laporan_Reverse_Engineering_Presensi_Biometrik.html");
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Dedicated helper to rasterize SVG into Canvas and download as standard PNG image file (Light background)
+        function downloadDiagram(containerId, filename) {
+            try {
+                const container = document.getElementById(containerId);
+                const svgElement = container.querySelector('svg');
+                if (!svgElement) {
+                    alert('Diagram belum selesai dimuat. Harap tunggu sebentar lalu coba kembali.');
+                    return;
+                }
+                
+                // Get SVG width and height
+                let width = 800;
+                let height = 600;
+                if (svgElement.viewBox && svgElement.viewBox.baseVal) {
+                    width = svgElement.viewBox.baseVal.width || svgElement.clientWidth || 800;
+                    height = svgElement.viewBox.baseVal.height || svgElement.clientHeight || 600;
+                } else {
+                    const rect = svgElement.getBoundingClientRect();
+                    width = rect.width || 800;
+                    height = rect.height || 600;
+                }
+                
+                // Double dimensions for higher PNG resolution
+                const scale = 2;
+                const canvasWidth = width * scale;
+                const canvasHeight = height * scale;
+                
+                const serializer = new XMLSerializer();
+                let source = serializer.serializeToString(svgElement);
+                
+                // Inject XML namespaces if not present
+                if(!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)){
+                    source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+                }
+                if(!source.match(/^<svg[^>]+xmlns:xlink="http:\/\/www\.w3\.org\/1999\/xlink"/)){
+                    source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999\/xlink"');
+                }
+                
+                // Explicitly insert width and height attributes into the SVG tag for Chrome rendering
+                source = source.replace(/<svg[^>]*>/, (match) => {
+                    let replaced = match;
+                    if (!replaced.includes('width=')) {
+                        replaced = replaced.replace('<svg', `<svg width="${width}"`);
+                    } else {
+                        replaced = replaced.replace(/width="[^"]*"/, `width="${width}"`);
+                    }
+                    if (!replaced.includes('height=')) {
+                        replaced = replaced.replace('<svg', `<svg height="${height}"`);
+                    } else {
+                        replaced = replaced.replace(/height="[^"]*"/, `height="${height}"`);
+                    }
+                    return replaced;
+                });
+                
+                // Create Blob from SVG content
+                const svgBlob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(svgBlob);
+                
+                // Draw SVG image to Canvas and export as PNG (White background)
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = function() {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = canvasWidth;
+                        canvas.height = canvasHeight;
+                        const context = canvas.getContext('2d');
+                        
+                        // Draw clean white background for light theme
+                        context.fillStyle = '#ffffff';
+                        context.fillRect(0, 0, canvasWidth, canvasHeight);
+                        
+                        // Draw image
+                        context.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+                        
+                        // Get data URL as PNG
+                        const pngUrl = canvas.toDataURL('image/png');
+                        
+                        const link = document.createElement("a");
+                        link.href = pngUrl;
+                        link.download = filename;
+                        link.style.visibility = 'hidden';
+                        
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    } catch (canvasError) {
+                        console.error('Canvas serialization failed:', canvasError);
+                        fallbackToSvg(source, filename.replace('.png', '.svg'), url);
+                    }
+                };
+                
+                img.onerror = function(err) {
+                    console.error('Image element load failed:', err);
+                    fallbackToSvg(source, filename.replace('.png', '.svg'), url);
+                };
+                
+                img.src = url;
+            } catch (err) {
+                console.error('Diagram download caught error:', err);
+                alert('Gagal memproses unduhan diagram.');
+            }
+        }
+
+        // Fallback method to download diagram as vector SVG image if browser blocks canvas rasterization
+        function fallbackToSvg(svgSource, filename, objectUrl) {
+            console.log('Executing direct SVG fallback...');
+            const link = document.createElement("a");
+            link.href = objectUrl;
+            link.download = filename;
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert('Diagram berhasil diunduh dalam format Vector SVG (Gambar Vektor) karena batasan keamanan browser Anda untuk format PNG.');
+        }
+    </script>
+</body>
+</html>
