@@ -292,7 +292,10 @@ graph TD
         UC3([Mengunggah Surat Bukti])
         UC4([Melihat Dashboard & Log Kehadiran])
         UC5([Mengubah Pengaturan GPS & Lokasi])
-        UC6([Mengelola Data Siswa & Wajah])
+        UC6([Mengelola Data Wajah Siswa])
+        UC7([Melihat Daftar Siswa])
+        UC8([Tambah / Edit Data Siswa])
+        UC9([Hapus Data Siswa])
     end
 
     Siswa((Siswa)) --> UC1
@@ -300,8 +303,13 @@ graph TD
     UC2 -.->|include| UC3
 
     Admin((Admin)) --> UC4
-    Admin --> UC5
-    Admin --> UC6
+    Admin((Admin)) --> UC5
+    Admin((Admin)) --> UC7
+    Admin((Admin)) --> UC8
+    Admin((Admin)) --> UC9
+    UC8 -.->|include| UC6
+
+    Admin -.->|mengelola| Siswa
 
     AI_Engine((Python AI Engine)) -.->|proses biometrik| UC1
     AI_Engine -.->|proses biometrik| UC2
@@ -311,7 +319,10 @@ graph TD
     style UC3 fill:#f8fafc,stroke:#64748b,stroke-width:2px,stroke-dasharray: 5 5,color:#334155
     style UC4 fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
     style UC5 fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
-    style UC6 fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
+    style UC6 fill:#f8fafc,stroke:#64748b,stroke-width:2px,stroke-dasharray: 5 5,color:#334155
+    style UC7 fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
+    style UC8 fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
+    style UC9 fill:#f8fafc,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
     style Siswa fill:#ffffff,stroke:#2563eb,stroke-width:2px,color:#0f172a
     style Admin fill:#ffffff,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
     style AI_Engine fill:#ffffff,stroke:#10b981,stroke-width:2px,color:#0f172a
@@ -329,15 +340,15 @@ graph TD
                     <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2"><i class="fa-solid fa-circle-info text-blue-500 mr-1.5"></i> Deskripsi & Analisis Sistem</h3>
                     
                     <p>
-                        <strong>Definisi & Aliran Bisnis:</strong> Use Case Diagram menggambarkan interaksi batas sistem (system boundary) antara aktor (entitas eksternal) dengan fungsionalitas presensi biometrik pada lobi sekolah. Terdapat tiga aktor utama yang diidentifikasi dalam sistem: Siswa sebagai pelaku utama kegiatan belajar mengajar yang mengisi presensi, Administrator sebagai pengelola data master dan sistem, serta Python AI Engine sebagai aktor sistem terkomputerisasi eksternal yang diintegrasikan untuk menangani pengenalan wajah secara real-time. Use case utama bagi Siswa mencakup "Melakukan Presensi Wajah" dan "Mengajukan Sakit/Izin" secara mandiri di kiosk. Pengajuan sakit/izin memiliki hubungan <em>include</em> dengan "Mengunggah Surat Bukti", yang menegaskan bahwa secara prosedural sistem mewajibkan pengunggahan lampiran berkas pendukung medis atau surat persetujuan orang tua sebagai bukti sah ketidakhadiran siswa.
+                        <strong>Definisi & Aliran Bisnis:</strong> Use Case Diagram menggambarkan interaksi batas sistem (system boundary) antara aktor (entitas eksternal) dengan fungsionalitas presensi biometrik pada lobi sekolah. Terdapat tiga aktor utama yang diidentifikasi dalam sistem: <strong>Siswa</strong> sebagai pelaku utama kegiatan belajar mengajar yang mengisi presensi, <strong>Administrator</strong> sebagai pengelola data master dan sistem, serta <strong>Python AI Engine</strong> sebagai aktor sistem terkomputerisasi eksternal yang diintegrasikan untuk menangani pengenalan wajah secara real-time. Use case utama bagi Siswa mencakup "Melakukan Presensi Wajah" dan "Mengajukan Sakit/Izin" secara mandiri di kiosk. Pengajuan sakit/izin memiliki hubungan <em>include</em> dengan "Mengunggah Surat Bukti", yang menegaskan bahwa secara prosedural sistem mewajibkan pengunggahan lampiran berkas pendukung medis atau surat persetujuan orang tua sebagai bukti sah ketidakhadiran siswa. Sementara itu, aktor Admin memiliki relasi <em>mengelola</em> langsung terhadap entitas Siswa, yang diwujudkan melalui tiga use case manajemen data: "Melihat Daftar Siswa" (UC7), "Tambah / Edit Data Siswa" (UC8), dan "Hapus Data Siswa" (UC9). UC8 memiliki hubungan <em>include</em> dengan "Mengelola Data Wajah Siswa" (UC6), karena setiap penambahan atau perubahan data siswa juga melibatkan pendaftaran atau pembaruan data biometrik wajah di sistem AI.
                     </p>
                     
                     <p>
-                        <strong>Implementasi Kode Program:</strong> Dari hasil rekayasa balik struktur kode aplikasi, use case "Melakukan Presensi Wajah" dipetakan langsung pada halaman depan kiosk yang dikendalikan oleh berkas template <a href="file:///d:/Semester%206/OOAD/resources/views/absensi.blade.php" class="text-blue-500 hover:underline">absensi.blade.php</a> dan diproses pada controller <a href="file:///d:/Semester%206/OOAD/app/Http/Controllers/PublicAbsensiController.php" class="text-blue-500 hover:underline">PublicAbsensiController.php</a> melalui method <code>scanAuto()</code>. Use case "Mengajukan Sakit/Izin" diproses melalui form input di sisi client dan ditransmisikan ke server menggunakan method <code>submitIzin()</code> pada controller yang sama, yang kemudian mendelegasikan logika penyimpanannya ke dalam database melalui class service <a href="file:///d:/Semester%206/OOAD/app/Services/AttendanceService.php" class="text-blue-500 hover:underline">AttendanceService.php</a> di method <code>submitStudentLeave()</code>. Di sisi admin, pengelolaan data master, penyesuaian parameter radius koordinat GPS, dan verifikasi log kehadiran dipetakan pada folder admin controller, khususnya pada berkas <code>SettingController.php</code>.
+                        <strong>Implementasi Kode Program:</strong> Dari hasil rekayasa balik struktur kode aplikasi, use case "Melakukan Presensi Wajah" dipetakan langsung pada halaman depan kiosk yang dikendalikan oleh berkas template <a href="file:///d:/Semester%206/OOAD/resources/views/absensi.blade.php" class="text-blue-500 hover:underline">absensi.blade.php</a> dan diproses pada controller <a href="file:///d:/Semester%206/OOAD/app/Http/Controllers/PublicAbsensiController.php" class="text-blue-500 hover:underline">PublicAbsensiController.php</a> melalui method <code>scanAuto()</code>. Use case "Mengajukan Sakit/Izin" diproses melalui form input di sisi client dan ditransmisikan ke server menggunakan method <code>submitIzin()</code> pada controller yang sama, yang kemudian mendelegasikan logika penyimpanannya ke dalam database melalui class service <a href="file:///d:/Semester%206/OOAD/app/Services/AttendanceService.php" class="text-blue-500 hover:underline">AttendanceService.php</a> di method <code>submitStudentLeave()</code>. Di sisi admin, use case pengelolaan data siswa (UC7, UC8, UC9) diimplementasikan sepenuhnya pada berkas <a href="file:///d:/Semester%206/OOAD/app/Http/Controllers/Admin/StudentCRUDController.php" class="text-blue-500 hover:underline">StudentCRUDController.php</a> yang mengekspos operasi CRUD lengkap (index, create, store, edit, update, destroy). Logika bisnis pengelolaan siswa didelegasikan ke dalam <a href="file:///d:/Semester%206/OOAD/app/Services/StudentService.php" class="text-blue-500 hover:underline">StudentService.php</a>, termasuk proses registrasi data wajah siswa ke AI Engine Python saat data baru ditambahkan (UC6). Penyesuaian parameter radius koordinat GPS dan pengaturan sistem dikelola pada berkas <code>SettingController.php</code>.
                     </p>
                     
                     <p>
-                        <strong>Rekayasa Balik & Pola Desain:</strong> Melalui analisis rekayasa balik, use case ini menunjukkan pemisahan hak akses (Role-Based Access Control) yang sangat ketat untuk mengamankan data kehadiran sekolah. Dengan membatasi akses siswa hanya pada fungsi presensi wajah lobi dan pengisian izin, sistem meminimalisir celah eksploitasi data kehadiran. Relasi dependensi <em>include</em> pada use case unggah dokumen membuktikan bahwa sistem menerapkan validasi berlapis di mana model database <code>Attendance</code> dirancang untuk menerima field <code>face_image_path</code> opsional yang dialokasikan khusus untuk menyimpan path file dokumen surat izin dalam folder lokal <code>storage/app/public/leave_attachments</code>.
+                        <strong>Rekayasa Balik & Pola Desain:</strong> Melalui analisis rekayasa balik, use case ini menunjukkan pemisahan hak akses (Role-Based Access Control / RBAC) yang sangat ketat untuk mengamankan data kehadiran sekolah. Relasi <em>mengelola</em> antara Admin dan Siswa mencerminkan konsep <em>association</em> dalam UML, di mana Admin sebagai aktor berinteraksi dengan entitas data Siswa melalui serangkaian use case CRUD. Pola ini juga mengungkap hubungan ketergantungan implisit: ketika Admin menambah atau mengubah data Siswa (UC8), sistem secara otomatis memicu use case <em>include</em> ke UC6 untuk mendaftarkan ulang atau memperbarui embedding biometrik wajah ke dataset Python AI Engine. Relasi dependensi <em>include</em> pada use case unggah dokumen (UC3) membuktikan bahwa sistem menerapkan validasi berlapis di mana model database <code>Attendance</code> dirancang untuk menerima field <code>face_image_path</code> opsional yang dialokasikan khusus untuk menyimpan path file dokumen surat izin dalam folder lokal <code>storage/app/public/leave_attachments</code>.
                     </p>
                 </div>
             </section>
